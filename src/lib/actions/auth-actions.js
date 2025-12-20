@@ -37,7 +37,16 @@ export async function getMyProfile() {
         return { success: false, data: null };
     }
 
-    return { success: true, data: profile };
+    const userData = {
+      id: user.id,
+      full_name: profile.full_name,
+      role_id: profile.role_id,
+      rank_level: profile.roles.rank_level,
+      email: user.email,
+      created_at: user.created_at
+    };
+
+    return { success: true, data: profile, user: user };
   } catch (error) {
     return { success: false, error: error.message };
   }
