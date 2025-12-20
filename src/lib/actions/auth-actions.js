@@ -28,7 +28,7 @@ export async function getMyProfile() {
 
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, role_id, roles(rank_level)')
+        .select('full_name, role_id, roles(rank_level, description)')
         .eq('id', user.id)
         .single();
         
@@ -41,12 +41,14 @@ export async function getMyProfile() {
       id: user.id,
       full_name: profile.full_name,
       role_id: profile.role_id,
+      description: profile.roles.description,
       rank_level: profile.roles.rank_level,
       email: user.email,
-      created_at: user.created_at
+      created_at: user.created_at,
+      last_login: user.last_sign_in_at
     };
 
-    return { success: true, data: profile, user: user };
+    return { success: true, data: profile, user: userData };
   } catch (error) {
     return { success: false, error: error.message };
   }

@@ -26,7 +26,7 @@ export default function Header({
   return (
     <header className="h-16 bg-[var(--background)] border-b border-[var(--border)] flex items-center justify-between px-8 shrink-0 relative z-50">
       <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-        Neural Engine <span className="text-brand">v1.0</span>
+        Unity Sales <span className="text-brand">v1.0</span>
       </div>
 
       <div className="flex items-center gap-6">
