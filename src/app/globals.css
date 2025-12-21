@@ -66,3 +66,19 @@ html, body {
 * {
   border-color: var(--border);
 }
+
+/* --- ANIMACIONES NEURAL PROTOCOL --- */
+
+/* 1. Vibración para el Modal de Confirmación */
+@keyframes system-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-system-shake {
+  animation: system-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+
+

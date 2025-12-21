@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/shared/Sidebar";
 import Header from "@/components/shared/Header";
-import { getMyProfile } from "@/lib/actions/auth-actions"; 
+import { getMyProfile } from "@/lib/actions/auth-actions";
 import { getProtectNavigation } from "@/lib/actions/navigation-actions";
+import { Toaster } from "sonner";
 
 export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(true); 
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [userData, setUserData] = useState({ profile: null, menu: [] });
   const pathname = usePathname();
@@ -30,7 +31,7 @@ export default function DashboardLayout({ children }) {
       });
       setMounted(true);
     }
-    
+
     initDashboard();
   }, []);
 
@@ -45,8 +46,8 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[var(--background)]">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
+      <Sidebar
+        isOpen={isSidebarOpen}
         onToggle={() => setSidebarOpen(!isSidebarOpen)}
         pathname={pathname}
         user={userData.profile}
@@ -55,7 +56,7 @@ export default function DashboardLayout({ children }) {
       />
 
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        <Header 
+        <Header
           user={userData.profile}
           isDarkMode={isDarkMode}
           onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
@@ -64,6 +65,19 @@ export default function DashboardLayout({ children }) {
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
             {children}
+            {/* <Toaster richColors closeButton position="top-right" theme="system" /> */}
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                unstyled: true,
+                // Esto asegura que el contenedor no limite el tamaño de tus notificaciones
+                className: 'pointer-events-auto flex justify-end items-start p-4',
+              }}
+              /* Espacio entre notificaciones */
+              gap={12}
+              /* Cuántos se ven a la vez */
+              visibleToasts={5}
+            />
           </div>
         </main>
       </div>
