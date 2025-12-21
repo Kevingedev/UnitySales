@@ -2,10 +2,17 @@
 import { useState, useEffect } from "react";
 import { Plus, AlertTriangle, Calendar, Package, MoreVertical, Sparkles } from "lucide-react";
 import { getInventory } from "@/lib/actions/inventory-actions";
+import AddBatchModal from "@/components/inventory/AddBatchModal";
 
 export default function InventoryPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const loadData = async () => {
+    const response = await getInventory();
+    if (response.success) setProducts(response.products);
+  };
+
 
   useEffect(() => {
     async function loadData() {
@@ -16,14 +23,29 @@ export default function InventoryPage() {
     loadData();
   }, []);
 
-  // Lógica de Riesgo basada en Stock
-  const getRiskLevel = (stock, minStock) => {
-    if (stock === 0) return { label: "CRITICAL LOSS", style: "border-red-500/50 text-red-500 bg-red-500/10" };
-    if (stock <= minStock) return { label: "REPLENISH", style: "border-amber-500/50 text-amber-500 bg-amber-500/10" };
-    return { label: "OPTIMAL", style: "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" };
+  // Lógica de Riesgo basada en Stock se muestra en el grid de KPI's badges
+  const getRiskLevel = (stock, minStock, expirationDate) => {
+      const today = new Date();
+      const expDate = expirationDate ? new Date(expirationDate) : null;
+      
+      // 1. Riesgo por Expiración (Si falta menos de 30 días)
+      if (expDate && expDate < today) {
+          return { label: "EXPIRED", style: "border-red-600/50 text-red-600 bg-red-600/10" };
+      }
+      
+      const daysToExpire = expDate ? (expDate - today) / (1000 * 60 * 60 * 24) : 999;
+      if (daysToExpire < 30) {
+          return { label: "NEAR EXPIRY", style: "border-orange-500/50 text-orange-500 bg-orange-500/10" };
+      }
+
+      // 2. Riesgo por Stock
+      if (stock === 0) return { label: "OUT OF STOCK", style: "border-red-500/50 text-red-500 bg-red-500/10" };
+      if (stock <= minStock) return { label: "LOW STOCK", style: "border-amber-500/50 text-amber-500 bg-amber-500/10" };
+      
+      return { label: "OPTIMAL", style: "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" };
   };
 
-  const lossRiskCount = products.filter(p => p.stock <= (p.min_stock || 5)).length;
+  const lossRiskCount = products.filter(p => p.stock <= (p.min_stock || 5)).length; // Contador de productos en riesgo
 
   return (
     <div className="space-y-6">
@@ -33,7 +55,8 @@ export default function InventoryPage() {
           <h1 className="text-2xl font-black uppercase tracking-tighter italic">Stock & Batch Control</h1>
           <p className="text-zinc-500 text-sm">Traceability and loss prevention monitoring.</p>
         </div>
-        <button className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20">
+        <button className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+          onClick={() => setIsModalOpen(true)}> {/* Abrir el modal para agregar un nuevo batch */}
           <Plus size={18} /> Add New Batch
         </button>
       </div>
@@ -72,6 +95,7 @@ export default function InventoryPage() {
               <th className="p-4">Category</th>
               <th className="p-4">On Hand</th>
               <th className="p-4">Unit Price</th>
+              <th className="p-4">Expiration Date</th>
               <th className="p-4 text-right">Risk Status</th>
             </tr>
           </thead>
@@ -100,6 +124,12 @@ export default function InventoryPage() {
                   <td className="p-4 font-mono text-xs font-bold">
                     ${parseFloat(item.base_price).toFixed(2)}
                   </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+                      <Calendar size={14} />
+                      {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString() : 'N/A'}
+                    </div>
+                  </td>
                   <td className="p-4 text-right">
                     <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${risk.style} transition-all`}>
                       {risk.label}
@@ -111,6 +141,12 @@ export default function InventoryPage() {
           </tbody>
         </table>
       </div>
+      {/* El Modal para agregar un nuevo batch */}
+      <AddBatchModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onRefresh={loadData} 
+      />
     </div>
   );
 }
