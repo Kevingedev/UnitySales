@@ -1,6 +1,6 @@
 "use client";
 // 1. IMPORTANTE: Faltaba importar useEffect
-import { useState, useEffect } from "react"; 
+import { useState, useEffect } from "react";
 import { Search, ShoppingCart, Plus, Minus, CreditCard, PackageX, Trash2 } from "lucide-react";
 import { getProducts, processTransaction } from "@/lib/actions/sales-actions";
 
@@ -16,7 +16,8 @@ export default function SalesPage() {
       try {
         const response = await getProducts();
         if (response.success) {
-          setProducts(response.data);
+          setProducts(response.products);
+          // console.log(response.products);
         }
       } catch (error) {
         console.error("Failed to load products:", error);
@@ -26,24 +27,24 @@ export default function SalesPage() {
     }
     fetchData();
   }, []);
-
+// console.log(products);
   // 2. Acción de Finalizar Venta
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    
-    const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+    const total = cart.reduce((acc, item) => acc + (item.base_price * item.quantity), 0);
     const result = await processTransaction(cart, total);
-    
+
     if (result.success) {
       alert(`Transaction Successful! ID: ${result.transactionId}`);
-      setCart([]); 
+      setCart([]);
     } else {
       alert("Error: " + result.error);
     }
   };
 
   // 3. CORRECCIÓN: Usar 'products' en lugar de 'PRODUCTS_DB'
-  const filteredProducts = products.filter(product => 
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -52,7 +53,7 @@ export default function SalesPage() {
     if (existingItem && existingItem.quantity >= product.stock) return;
 
     if (existingItem) {
-      setCart(cart.map(item => 
+      setCart(cart.map(item =>
         item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
@@ -73,7 +74,7 @@ export default function SalesPage() {
     setCart(cart.filter(item => item.id !== productId));
   };
 
-  const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const cartTotal = cart.reduce((acc, item) => acc + (item.base_price * item.quantity), 0);
 
   if (loading) {
     return (
@@ -88,12 +89,12 @@ export default function SalesPage() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-120px)]">
-      
+
       {/* LEFT SECTION: PRODUCT DISCOVERY */}
       <div className="lg:col-span-2 space-y-4 flex flex-col">
         <div className="relative">
           <Search className="absolute left-3 top-3 text-zinc-500" size={20} />
-          <input 
+          <input
             type="text"
             placeholder="Search products by name..."
             className="w-full pl-10 pr-4 py-3 bg-[var(--card)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-brand outline-none transition-all font-medium"
@@ -104,15 +105,15 @@ export default function SalesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-2">
           {filteredProducts.map(product => (
-            <button 
-              key={product.id} 
+            <button
+              key={product.id}
               disabled={product.stock === 0}
               className="p-4 bg-[var(--card)] border border-[var(--border)] rounded-xl flex justify-between items-center hover:border-brand transition-all cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => addToCart(product)}
             >
               <div className="text-left">
                 <h3 className="font-bold text-[var(--foreground)]">{product.name}</h3>
-                <p className="text-brand font-black text-lg">${product.price.toFixed(2)}</p>
+                <p className="text-brand font-black text-lg">${product.base_price.toFixed(2)}</p>
                 <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-widest">
                   Stock: {product.stock} units
                 </p>
@@ -149,11 +150,11 @@ export default function SalesPage() {
                 <div className="flex justify-between items-start mb-2">
                   <div className="max-w-[140px]">
                     <p className="text-sm font-bold leading-tight truncate text-[var(--foreground)]">{item.name}</p>
-                    <p className="text-[10px] font-mono text-zinc-500 italic">${item.price.toFixed(2)}/unit</p>
+                    <p className="text-[10px] font-mono text-zinc-500 italic">${item.base_price.toFixed(2)}/unit</p>
                   </div>
-                  <p className="font-black text-sm text-brand">${(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="font-black text-sm text-brand">${(item.base_price * item.quantity).toFixed(2)}</p>
                 </div>
-                
+
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center gap-1 bg-[var(--card)] rounded-lg border border-[var(--border)] p-1">
                     <button onClick={() => decreaseQuantity(item.id)} className="p-1 hover:bg-brand/10 text-zinc-500 hover:text-brand rounded"><Minus size={14} /></button>
@@ -172,8 +173,8 @@ export default function SalesPage() {
             <span>Total</span>
             <span className="text-brand">${cartTotal.toFixed(2)}</span>
           </div>
-          
-          <button 
+
+          <button
             onClick={handleCheckout}
             disabled={cart.length === 0}
             className="w-full bg-brand hover:bg-brand-hover text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all disabled:opacity-20 shadow-xl shadow-brand/20 active:scale-[0.98]"

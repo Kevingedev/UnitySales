@@ -4,18 +4,18 @@
 
 // Simulamos una base de datos persistente en memoria para esta etapa de desarrollo
 // En el siguiente paso la conectaremos a Supabase/PostgreSQL
-let MOCK_PRODUCTS = [
-  { id: "p1", name: "Whole Milk 1L", category: "Dairy", price: 1.20, stock: 50 },
-  { id: "p2", name: "Sliced Bread", category: "Bakery", price: 2.50, stock: 15 },
-];
-
+import { createClient } from "@/lib/supabase-server";
 /**
  * FETCH: Obtener todos los productos
  */
 export async function getProducts() {
   try {
-    // Aquí iría: return await prisma.product.findMany()
-    return { success: true, data: MOCK_PRODUCTS };
+    const supabase = await createClient();
+    const { data, error } = await supabase.from('products').select('*');
+
+    if (error) throw error;
+
+    return { success: true, products: data };
   } catch (error) {
     return { success: false, error: "Database connection failed" };
   }
@@ -36,9 +36,9 @@ export async function processTransaction(cartItems, total) {
     // 1. Aquí guardarías en la tabla 'Sales'
     // 2. Aquí actualizarías el stock en la tabla 'Inventory'
 
-    return { 
-      success: true, 
-      transactionId: `TX-${Math.random().toString(36).substr(2, 9).toUpperCase()}` 
+    return {
+      success: true,
+      transactionId: `TX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
     };
   } catch (error) {
     return { success: false, error: "Transaction failed" };
