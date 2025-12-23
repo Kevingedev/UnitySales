@@ -5,8 +5,8 @@ export default function ConfirmDialog({ isOpen, onClose, onConfirm, title, messa
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-system-shake">
-            <div className="bg-[var(--card)] border border-red-400/20 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+            <div className="bg-[var(--card)] border border-red-400/20 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200 animate-system-shake">
 
                 {/* Header con advertencia */}
                 <div className="p-6 pb-2 flex flex-col items-center text-center">

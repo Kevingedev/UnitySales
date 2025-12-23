@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react"; // 1. Añadimos useCallback
 import { Plus, AlertTriangle, Calendar, Package, MoreVertical, Sparkles, Edit, Trash2 } from "lucide-react";
 import { getInventory, deleteProduct } from "@/lib/actions/inventory-actions";
+import AddProductModal from "@/components/inventory/AddProductModal";
 import AddBatchModal from "@/components/inventory/AddBatchModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { notify } from "@/components/ui/ToastAlert";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 
 export default function InventoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -109,15 +111,25 @@ export default function InventoryPage() {
           <h1 className="text-2xl font-black uppercase tracking-tighter italic">Stock & Batch Control</h1>
           <p className="text-zinc-500 text-sm">Traceability and loss prevention monitoring.</p>
         </div>
-        <button
-          className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
-          onClick={() => {
-            setEditingProduct(null);
-            setIsModalOpen(true);
-          }}
-        >
-          <Plus size={18} /> Add New Batch
-        </button>
+        <div className="flex justify-between items-end gap-2">
+          <button
+            className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+            onClick={() => {
+              setEditingProduct(null);
+              setIsModalOpen(true);
+            }}
+          >
+            <Plus size={18} /> Add New Product
+          </button>
+          <button
+            className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+            onClick={() => {
+              setIsBatchModalOpen(true);
+            }}
+          >
+            <Plus size={18} /> Add New Batch
+          </button>
+        </div>
       </div>
 
       {/* KPI GRID (Tu código igual...) */}
@@ -202,11 +214,16 @@ export default function InventoryPage() {
         </table>
       </div>
 
-      <AddBatchModal
+      <AddProductModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onRefresh={loadData}
         productToEdit={editingProduct}
+      />
+      <AddBatchModal 
+        isOpen={isBatchModalOpen} 
+        onClose={() => setIsBatchModalOpen(false)} 
+        products={products} 
       />
       <ConfirmDialog
         isOpen={isDeleteModalOpen}

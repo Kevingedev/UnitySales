@@ -30,9 +30,9 @@ export async function createProduct(formData) {
     category_id: formData.get("category"), // Categoría del producto
     base_price: parseFloat(formData.get("base_price")), // Precio base del producto
     cost_price: parseFloat(formData.get("cost_price")), // Precio de costo del producto
-    stock: parseInt(formData.get("stock")), // Stock del producto
-    min_stock: parseInt(formData.get("min_stock")), // Stock mínimo del producto
-    expiration_date: formData.get("expiration_date") || null, // Fecha de expiración del producto
+    stock: parseInt(formData.get("stock") || 0), // Stock del producto
+    min_stock: parseInt(formData.get("min_stock") || 0), // Stock mínimo del producto
+    //expiration_date: formData.get("expiration_date") || null, // Fecha de expiración del producto
   };
 
   const { data, error } = await supabase // Insertar el producto en la base de datos
@@ -91,6 +91,32 @@ export async function updateProduct(formData) {
   }
   return { success: true, data };
 }
+
+export async function createBatch(formData) {
+
+  const supabase = await createClient();
+
+  const batchData = {
+    product_id: formData.get("product_id"),
+    batch_number: formData.get("batch_number"),
+    stock: formData.get("stock"),
+    expiration_date: formData.get("expiration_date"),
+    cost_per_unit: formData.get("cost_per_unit"),
+  }
+
+  const {data, error} = await supabase
+    .from('batches')
+    .insert([batchData])
+    .select();
+
+  if (error) {
+    console.error("Error creating batch:", error.message);
+    return { success: false, error: error.message };
+  }
+  return { success: true, data };
+
+}
+
 
 export async function getCategories() {
 

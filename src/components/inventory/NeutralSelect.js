@@ -6,44 +6,44 @@ import * as Popover from "@radix-ui/react-popover";
 import { getCategories } from "@/lib/actions/inventory-actions";
 
 export default function NeuralSelect({ value, onChange, placeholder = "Select category..." }) {
-    const [open, setOpen] = React.useState(false);
-    const [categories, setCategories] = React.useState([]);
+  const [open, setOpen] = React.useState(false);
+  const [categories, setCategories] = React.useState([]);
 
-    React.useEffect(() => {
-        let mounted = true;
-        const fetchCategories = async () => {
-            try {
-                const res = await getCategories();
-                if (mounted && res && res.success) {
-                    setCategories(res.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch categories", error);
-            }
-        };
-        fetchCategories();
-        return () => { mounted = false; };
-    }, []);
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchCategories = async () => {
+      try {
+        const res = await getCategories();
+        if (mounted && res && res.success) {
+          setCategories(res.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories", error);
+      }
+    };
+    fetchCategories();
+    return () => { mounted = false; };
+  }, []);
 
-    // Prepara las opciones internamente
-    const options = categories.map(cat => ({
-        value: cat.id,
-        label: cat.name
-    }));
+  // Prepara las opciones internamente
+  const options = categories.map(cat => ({
+    value: cat.id,
+    label: cat.name
+  }));
 
-    // Encontrar la etiqueta de la opción seleccionada
-    const selectedLabel = options.find((opt) => opt.value === value)?.label;
+  // Encontrar la etiqueta de la opción seleccionada
+  const selectedLabel = options.find((opt) => opt.value === value)?.label;
 
-    return (
-        <div className="space-y-1.5">
+  return (
+    <div className="space-y-1.5">
       <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight flex items-center gap-2">
         <Layers size={14} /> Category
       </label>
 
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="w-full flex items-center justify-between bg-zinc-500/5 border border-[var(--border)] rounded-lg px-3 py-2 text-sm hover:border-brand/50 transition-all outline-none"
           >
             {/* Cambiamos text-zinc-200 por var(--foreground) para que cambie en modo claro */}
@@ -97,5 +97,5 @@ export default function NeuralSelect({ value, onChange, placeholder = "Select ca
         </Popover.Portal>
       </Popover.Root>
     </div>
-    );
+  );
 }
