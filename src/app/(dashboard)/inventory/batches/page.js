@@ -1,117 +1,91 @@
 "use client";
-import { useState, useEffect, useCallback } from "react"; // 1. Añadimos useCallback
-import { Plus, AlertTriangle, Calendar, Package, MoreVertical, Sparkles, Edit, Trash2 } from "lucide-react";
-import { getInventory, deleteProduct } from "@/lib/actions/inventory-actions";
-import AddProductModal from "@/components/inventory/AddProductModal";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, AlertTriangle, Calendar, Package, MoreVertical, Sparkles, Edit, Trash2, Search, ChevronLeft, ChevronRight, DollarSign, Clock } from "lucide-react";
+import { getBatches, getProducts } from "@/lib/actions/inventory-actions";
 import AddBatchModal from "@/components/inventory/AddBatchModal";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { notify } from "@/components/ui/ToastAlert";
 
-export default function InventoryPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export default function BatchesPage() {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
-  const [products, setProducts] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [productsForModal, setProductsForModal] = useState([]); // Para el modal de crear lote
   const [loading, setLoading] = useState(true);
-  const [editingProduct, setEditingProduct] = useState(null);
 
-  //ESTADOS para el dialogo de Delete
-  // 1. Añade estos estados
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // ESTADOS para el buscador y paginación
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
 
-  // 2. Nueva función para abrir el modal
-  const handleDeleteRequest = (id) => {
-    setProductToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-
-  // 3. Función que ejecuta la eliminación real
-  const handleConfirmDelete = async () => {
-    if (!productToDelete) return;
-
-    setIsDeleting(true);
-    const res = await deleteProduct(productToDelete);
-
-    if (res.success) {
-      loadData(); // Recarga la tabla
-      setIsDeleteModalOpen(false);
-      // Alerta de éxito personalizada
-      notify.success('PROTOCOL_EXECUTED', {
-        description: 'El producto ha sido Eliminado con éxito.',
-      });
-    } else {
-      // Alerta de éxito personalizada
-      notify.error('SYSTEM_ERROR', {
-        description: 'No se ha podido eliminar el producto, Intente de nuevo.',
-      });
-    }
-    setIsDeleting(false);
-    setProductToDelete(null);
-  };
-
-  // 2. Memorizamos loadData para que React no crea que cambia en cada render
+  // Cargar datos de lotes
   const loadData = useCallback(async () => {
-    // No ponemos loading(true) aquí para evitar parpadeos en updates
-    const response = await getInventory();
+    setLoading(true);
+    console.log("buscando los lotes con search: ", search);
+    const response = await getBatches(page, itemsPerPage, search);
+
     if (response.success) {
-      setProducts(response.products);
+      setBatches(response.batches);
+      setTotalPages(Math.ceil((response.totalCount || 0) / itemsPerPage));
     }
     setLoading(false);
+  }, [page, search]);
+
+// console.log("batches: ", batches);
+  // Cargar productos para el modal (una sola vez)
+  useEffect(() => {
+    const fetchProducts = async () => {
+      // Pedimos una lista grande o sin paginar para el select del modal
+      // Nota: Idealmente deberíamos tener un endpoint de 'search' en el modal, 
+      // pero por ahora traemos los primeros 100 o usamos la misma función.
+      const res = await getProducts(1, 100);
+      if (res.success) {
+        setProductsForModal(res.products);
+      }
+    };
+    fetchProducts();
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]); // Dependencia limpia
+    const timer = setTimeout(() => {
+      loadData();
+    }, 400);
 
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
-  };
+    return () => clearTimeout(timer);
+  }, [loadData]);
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
 
-    // Optimistic update
-    const previousProducts = [...products];
-    setProducts(products.filter(p => p.id !== id));
-
-    const res = await deleteProduct(id);
-    if (!res.success) {
-      alert("Error deleting product");
-      setProducts(previousProducts); // Revertir con el backup
-    }
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingProduct(null);
-  };
-
-  // ... (tu lógica de getRiskLevel se queda igual, está perfecta)
-  const getRiskLevel = (stock, minStock, expirationDate) => {
+  const getRiskLevel = (batch) => {
     const today = new Date();
-    const expDate = expirationDate ? new Date(expirationDate) : null;
-    if (expDate && expDate < today) return { label: "EXPIRED", style: "border-red-600/50 text-red-600 bg-red-600/10" };
+    const expDate = batch.expiration_date ? new Date(batch.expiration_date) : null;
+
+    if (expDate && expDate < today)
+      return { label: "EXPIRED", style: "border-red-600/50 text-red-600 bg-red-600/10" };
+
     const daysToExpire = expDate ? (expDate - today) / (1000 * 60 * 60 * 24) : 999;
-    if (daysToExpire < 30) return { label: "NEAR EXPIRY", style: "border-orange-500/50 text-orange-500 bg-orange-500/10" };
-    if (stock === 0) return { label: "OUT OF STOCK", style: "border-red-500/50 text-red-500 bg-red-500/10" };
-    if (stock <= minStock) return { label: "LOW STOCK", style: "border-amber-500/50 text-amber-500 bg-amber-500/10" };
-    return { label: "OPTIMAL", style: "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" };
+
+    if (daysToExpire < 30)
+      return { label: "NEAR EXPIRY", style: "border-orange-500/50 text-orange-500 bg-orange-500/10" };
+
+    if (batch.stock === 0)
+      return { label: "EMPTY", style: "border-zinc-500/50 text-zinc-500 bg-zinc-500/10" };
+
+    return { label: "ACTIVE", style: "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" };
   };
 
-  const lossRiskCount = products.filter(p => p.stock <= (p.min_stock || 5)).length;
+  const batchesAtRisk = batches.filter(b => {
+    const risk = getRiskLevel(b);
+    return risk.label === "EXPIRED" || risk.label === "NEAR EXPIRY";
+  }).length;
 
   return (
     <div className="space-y-6">
       {/* HEADER SECTION */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-black uppercase tracking-tighter italic">Stock & Batch Control</h1>
-          <p className="text-zinc-500 text-sm">Traceability and loss prevention monitoring.</p>
+          <h1 className="text-2xl font-black uppercase tracking-tighter italic">Batch Management</h1>
+          <p className="text-zinc-500 text-sm">Track expiry dates, costs, and specific product lots.</p>
         </div>
         <div className="flex justify-between items-end gap-2">
-
           <button
             className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
             onClick={() => {
@@ -123,107 +97,169 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* KPI GRID (Tu código igual...) */}
+      {/* KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-[var(--card)] border border-[var(--border)] p-4 rounded-xl">
           <div className="flex justify-between items-start">
-            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Loss Risk</p>
-            <AlertTriangle className={lossRiskCount > 0 ? "text-red-500" : "text-zinc-500"} size={16} />
+            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Expiry Risk</p>
+            <AlertTriangle className={batchesAtRisk > 0 ? "text-orange-500" : "text-zinc-500"} size={16} />
           </div>
-          <p className="text-2xl font-black mt-1">{lossRiskCount} <span className="text-xs font-normal text-zinc-500 italic">items at risk</span></p>
+          <p className="text-2xl font-black mt-1">{batchesAtRisk} <span className="text-xs font-normal text-zinc-500 italic">batches need attention</span></p>
         </div>
-        {/* Agrega aquí el resto de tus KPIs */}
-        <div className="bg-[var(--card)] border border-[var(--border)] p-4 rounded-xl border-brand/30 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Sparkles size={40} className="text-brand" />
+
+        {/* Placeholder KPIs */}
+        <div className="bg-[var(--card)] border border-[var(--border)] p-4 rounded-xl">
+          <div className="flex justify-between items-start">
+            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Total Batches</p>
+            <Package className="text-brand" size={16} />
           </div>
-          <p className="text-brand text-[10px] font-bold uppercase tracking-widest">AI Suggestion</p>
-          <p className="text-sm font-medium mt-1">
-            {lossRiskCount > 0
-              ? `Restock required for ${products.find(p => p.stock <= p.min_stock)?.name || 'various items'}`
-              : "Inventory levels are stable. No actions required."}
-          </p>
+          <p className="text-2xl font-black mt-1">{batches.length} <span className="text-xs font-normal text-zinc-500 italic">active references</span></p>
+        </div>
+      </div>
+
+      {/* TOOLS & SEARCH BAR */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[var(--card)] p-4 border border-[var(--border)] rounded-2xl mb-4">
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brand transition-colors" size={18} />
+          <input
+            type="text"
+            placeholder="SEARCH BATCH OR PRODUCT..."
+            className="w-full bg-zinc-500/5 border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-xs font-bold uppercase outline-none focus:ring-1 focus:ring-brand transition-all placeholder:text-zinc-600"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-zinc-500/5 p-1 rounded-lg border border-[var(--border)]">
+            <button
+              disabled={page === 1 || loading}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="p-1.5 hover:bg-brand/10 text-zinc-500 hover:text-brand disabled:opacity-20 disabled:hover:bg-transparent transition-all rounded-md"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="px-3">
+              <span className="text-[10px] font-black font-mono">
+                PAGE {page} <span className="text-zinc-500">/</span> {totalPages}
+              </span>
+            </div>
+            <button
+              disabled={page === totalPages || loading}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="p-1.5 hover:bg-brand/10 text-zinc-500 hover:text-brand disabled:opacity-20 disabled:hover:bg-transparent transition-all rounded-md"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* DATA TABLE */}
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-zinc-500/5 border-b border-[var(--border)] text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-            <tr>
-              <th className="p-4">Product / Batch</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">On Hand</th>
-              <th className="p-4">Unit Price</th>
-              <th className="p-4">Expiration Date</th>
-              <th className="p-4 text-center">Actions</th>
-              <th className="p-4 text-right">Risk Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border)] text-sm">
-            {loading ? (
-              <tr><td colSpan="7" className="p-10 text-center text-zinc-500 animate-pulse font-mono uppercase text-[10px]">Accessing encrypted database...</td></tr>
-            ) : (
-              products.map((item) => {
-                const risk = getRiskLevel(item.stock, item.min_stock || 5, item.expiration_date);
-                return (
-                  <tr key={item.id} className="hover:bg-brand/5 transition-colors group">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-zinc-500/5 rounded-lg group-hover:bg-brand/10 transition-colors">
-                          <Package size={16} className="text-zinc-500 group-hover:text-brand" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-[var(--foreground)] uppercase tracking-tight">{item.name}</p>
-                          <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-tighter">ID: {item.sku}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-zinc-500 italic">{item.categories?.name || "General"}</td>
-                    <td className="p-4 font-black">{item.stock} <span className="text-[10px] font-normal text-zinc-500">units</span></td>
-                    <td className="p-4 font-mono text-xs font-bold">${parseFloat(item.base_price).toFixed(2)}</td>
-                    <td className="p-4 text-xs font-mono text-zinc-400">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} />
-                        {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEdit(item)} className="p-1.5 text-brand hover:bg-brand/10 rounded-lg transition-colors"><Edit size={16} /></button>
-                        <button onClick={() => handleDeleteRequest(item.id)} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"><Trash2 size={16} /></button>
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${risk.style}`}>{risk.label}</span>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-zinc-500/5 border-b border-[var(--border)] text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              <tr>
+                <th className="p-4">Batch Number</th>
+                <th className="p-4">Product</th>
+                <th className="p-4">Stock</th>
+                <th className="p-4">Cost / Unit</th>
+                <th className="p-4">Received / Expiry</th>
+                <th className="p-4 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)] text-sm">
+              {loading ? (
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan="6" className="p-8">
+                      <div className="h-4 bg-zinc-500/10 rounded w-full"></div>
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                ))
+              ) : batches.length > 0 ? (
+                batches.map((batch) => {
+                  const risk = getRiskLevel(batch);
+                  return (
+                    <tr key={batch.id} className="hover:bg-brand/5 transition-colors group">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-zinc-500/5 rounded-lg group-hover:bg-brand/10 transition-colors">
+                            <Package size={16} className="text-zinc-500 group-hover:text-brand" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[var(--foreground)] uppercase tracking-tight">{batch.batch_number}</p>
+                            <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-tighter">ID: {batch.id && batch.id.substring(0, 8)}...</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <p className="font-bold text-[var(--foreground)] uppercase tracking-tight">{batch.product_name || "Unknown Product"}</p>
+                      </td>
+                      <td className="p-4 font-black">
+                        {batch.stock} <span className="text-[10px] font-normal text-zinc-500">units</span>
+                      </td>
+                      <td className="p-4 font-mono text-xs font-bold text-zinc-500">
+                        {parseFloat(batch.cost_per_unit || 0).toFixed(2)}€
+                      </td>
+                      <td className="p-4 text-[10px] font-mono text-zinc-400">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <Clock size={12} className="text-zinc-600" />
+                            <span>IN: {batch.received_at ? new Date(batch.received_at).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar size={12} className={risk.label === "EXPIRED" ? "text-red-500" : "text-zinc-600"} />
+                            <span>EXP: {batch.expiration_date ? new Date(batch.expiration_date).toLocaleDateString() : 'NO_EXPIRY'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border shadow-sm ${risk.style}`}>
+                          {risk.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="p-20 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-30">
+                      <Search size={40} className="text-zinc-500" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em]">No Batches Found</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {/* FOOTER INFO */}
+        {!loading && batches.length > 0 && (
+          <div className="p-4 bg-zinc-500/5 border-t border-[var(--border)] flex justify-between items-center">
+            <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+              Showing {batches.length} batches
+            </p>
+            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">
+              UnitySales v1.0
+            </p>
+          </div>
+        )}
       </div>
 
-      <AddProductModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onRefresh={loadData}
-        productToEdit={editingProduct}
-      />
       <AddBatchModal
         isOpen={isBatchModalOpen}
-        onClose={() => setIsBatchModalOpen(false)}
-        products={products}
-      />
-      <ConfirmDialog
-        isOpen={isDeleteModalOpen}
-        loading={isDeleting}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Product"
-        message={`¿Estás seguro de que deseas eliminar el registro del sistema? Esta acción es irreversible.`}
+        onClose={() => {
+          setIsBatchModalOpen(false);
+          loadData(); // Recargar datos al cerrar modal (por si se creó uno)
+        }}
+        products={productsForModal}
       />
     </div>
   );
-} 
+}

@@ -2,21 +2,42 @@
 import { createClient } from "@/lib/supabase-server";
 
 // Función para obtener el inventario de la base de datos
-export async function getInventory() {
+export async function getProducts(page = 1, limit = 10, search = "") {
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    // 1. Calcular el rango para la paginación
+    // Ejemplo: Page 1 (0 a 9), Page 2 (10 a 19)
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // 2. Construir la consulta base
+    let query = supabase
       .from('products')
-      .select('*, categories(name)')
-      .order('created_at', { ascending: false });
+      .select('*, categories(name)', { count: 'exact' }); // 'exact' nos devuelve el total de filas
+
+    // 3. Aplicar filtros si hay búsqueda
+    if (search) {
+      // Busca en el nombre O en el SKU (insensible a mayúsculas)
+      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+    }
+
+    // 4. Aplicar paginación y orden
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) throw error;
 
-    return { success: true, products: data };
+    return {
+      success: true,
+      products: data,
+      totalCount: count, // Necesario para calcular totalPages en el frontend
+      currentPage: page
+    };
   } catch (error) {
     console.error("Inventory Error:", error.message);
-    return { success: false, products: [] };
+    return { success: false, products: [], totalCount: 0 };
   }
 }
 
@@ -92,31 +113,6 @@ export async function updateProduct(formData) {
   return { success: true, data };
 }
 
-export async function createBatch(formData) {
-
-  const supabase = await createClient();
-
-  const batchData = {
-    product_id: formData.get("product_id"),
-    batch_number: formData.get("batch_number"),
-    stock: formData.get("stock"),
-    expiration_date: formData.get("expiration_date"),
-    cost_per_unit: formData.get("cost_per_unit"),
-  }
-
-  const {data, error} = await supabase
-    .from('batches')
-    .insert([batchData])
-    .select();
-
-  if (error) {
-    console.error("Error creating batch:", error.message);
-    return { success: false, error: error.message };
-  }
-  return { success: true, data };
-
-}
-
 
 export async function getCategories() {
 
@@ -135,4 +131,57 @@ export async function getCategories() {
   }
 
   return { success: true, data };
+}
+
+// Funciones para obtener los lotes de un producto
+export async function createBatch(formData) {
+
+  const supabase = await createClient();
+
+  const batchData = {
+    product_id: formData.get("product_id"),
+    batch_number: formData.get("batch_number"),
+    stock: formData.get("stock"),
+    expiration_date: formData.get("expiration_date"),
+    cost_per_unit: formData.get("cost_per_unit"),
+  }
+
+  const { data, error } = await supabase
+    .from('batches')
+    .insert([batchData])
+    .select();
+
+  if (error) {
+    console.error("Error creating batch:", error.message);
+    return { success: false, error: error.message };
+  }
+  return { success: true, data };
+
+}
+
+export async function getBatches(page = 1, limit = 10, search = "") {
+  try {
+    const supabase = await createClient();
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // ESTOY HACIENDO CONSULTA A UNA VISTA CREADA EN LA BASE DE DATOS PARA QUE ME RETORNE LOS DATOS DE LOS LOTES DE LOS PRODUCTOS
+   let query = supabase.from('batches_with_products').select('*').or(`batch_number.ilike.%${search}%,product_name.ilike.%${search}%`);
+
+    const { data, error, count } = await query
+      .order('received_at', { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+
+    return { 
+      success: true, 
+      batches: data, 
+      totalCount: count || 0, 
+      currentPage: page 
+    };
+  } catch (error) {
+    console.error("Error fetching batches:", error);
+    return { success: false, batches: [], totalCount: 0 };
+  }
 }

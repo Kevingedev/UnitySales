@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react"; // 1. Añadimos useCallback
-import { Plus, AlertTriangle, Calendar, Package, MoreVertical, Sparkles, Edit, Trash2 } from "lucide-react";
-import { getInventory, deleteProduct } from "@/lib/actions/inventory-actions";
+import { Plus, AlertTriangle, Calendar, Package, MoreVertical, Sparkles, Edit, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { getProducts, deleteProduct } from "@/lib/actions/inventory-actions";
 import AddProductModal from "@/components/inventory/AddProductModal";
 import AddBatchModal from "@/components/inventory/AddBatchModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -14,6 +14,12 @@ export default function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState(null);
+
+  //ESTADOS para el buscador 
+const [search, setSearch] = useState("");
+const [page, setPage] = useState(1);
+const [totalPages, setTotalPages] = useState(1);
+const itemsPerPage = 10; // Puedes cambiar este número
 
   //ESTADOS para el dialogo de Delete
   // 1. Añade estos estados
@@ -52,18 +58,26 @@ export default function InventoryPage() {
   };
 
   // 2. Memorizamos loadData para que React no crea que cambia en cada render
-  const loadData = useCallback(async () => {
-    // No ponemos loading(true) aquí para evitar parpadeos en updates
-    const response = await getInventory();
-    if (response.success) {
-      setProducts(response.products);
-    }
-    setLoading(false);
-  }, []);
+ const loadData = useCallback(async () => {
+  setLoading(true);
+  // Pasamos page, itemsPerPage y search a la acción del servidor
+  const response = await getProducts(page, itemsPerPage, search);
+  
+  if (response.success) {
+    setProducts(response.products);
+    // Calculamos el total de páginas basándonos en el count real de la DB
+    setTotalPages(Math.ceil((response.totalCount || 0) / itemsPerPage));
+  }
+  setLoading(false);
+}, [page, search]); // Se vuelve a ejecutar si cambia la página o la búsqueda
 
-  useEffect(() => {
+ useEffect(() => {
+  const timer = setTimeout(() => {
     loadData();
-  }, [loadData]); // Dependencia limpia
+  }, 400); // Espera 400ms después de que dejas de escribir
+
+  return () => clearTimeout(timer);
+}, [loadData]);
 
   const handleEdit = (product) => {
     setEditingProduct(product);
@@ -108,7 +122,7 @@ export default function InventoryPage() {
       {/* HEADER SECTION */}
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-black uppercase tracking-tighter italic">Stock & Batch Control</h1>
+          <h1 className="text-2xl font-black uppercase tracking-tighter italic">Products Management</h1>
           <p className="text-zinc-500 text-sm">Traceability and loss prevention monitoring.</p>
         </div>
         <div className="flex justify-between items-end gap-2">
@@ -155,63 +169,152 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* TOOLS & SEARCH BAR */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[var(--card)] p-4 border border-[var(--border)] rounded-2xl mb-4">
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brand transition-colors" size={18} />
+          <input
+            type="text"
+            placeholder="SEARCH PRODUCT OR SKU..."
+            className="w-full bg-zinc-500/5 border border-[var(--border)] rounded-xl pl-10 pr-4 py-3 text-xs font-bold uppercase outline-none focus:ring-1 focus:ring-brand transition-all placeholder:text-zinc-600"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1); // Reiniciar a página 1 al buscar
+            }}
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-zinc-500/5 p-1 rounded-lg border border-[var(--border)]">
+            <button
+              disabled={page === 1 || loading}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="p-1.5 hover:bg-brand/10 text-zinc-500 hover:text-brand disabled:opacity-20 disabled:hover:bg-transparent transition-all rounded-md"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="px-3">
+              <span className="text-[10px] font-black font-mono">
+                PAGE {page} <span className="text-zinc-500">/</span> {totalPages}
+              </span>
+            </div>
+            <button
+              disabled={page === totalPages || loading}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="p-1.5 hover:bg-brand/10 text-zinc-500 hover:text-brand disabled:opacity-20 disabled:hover:bg-transparent transition-all rounded-md"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* DATA TABLE */}
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-zinc-500/5 border-b border-[var(--border)] text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-            <tr>
-              <th className="p-4">Product / Batch</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">On Hand</th>
-              <th className="p-4">Unit Price</th>
-              <th className="p-4">Expiration Date</th>
-              <th className="p-4 text-center">Actions</th>
-              <th className="p-4 text-right">Risk Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border)] text-sm">
-            {loading ? (
-              <tr><td colSpan="7" className="p-10 text-center text-zinc-500 animate-pulse font-mono uppercase text-[10px]">Accessing encrypted database...</td></tr>
-            ) : (
-              products.map((item) => {
-                const risk = getRiskLevel(item.stock, item.min_stock || 5, item.expiration_date);
-                return (
-                  <tr key={item.id} className="hover:bg-brand/5 transition-colors group">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-zinc-500/5 rounded-lg group-hover:bg-brand/10 transition-colors">
-                          <Package size={16} className="text-zinc-500 group-hover:text-brand" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-[var(--foreground)] uppercase tracking-tight">{item.name}</p>
-                          <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-tighter">ID: {item.sku}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-zinc-500 italic">{item.categories?.name || "General"}</td>
-                    <td className="p-4 font-black">{item.stock} <span className="text-[10px] font-normal text-zinc-500">units</span></td>
-                    <td className="p-4 font-mono text-xs font-bold">${parseFloat(item.base_price).toFixed(2)}</td>
-                    <td className="p-4 text-xs font-mono text-zinc-400">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} />
-                        {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEdit(item)} className="p-1.5 text-brand hover:bg-brand/10 rounded-lg transition-colors"><Edit size={16} /></button>
-                        <button onClick={() => handleDeleteRequest(item.id)} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"><Trash2 size={16} /></button>
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${risk.style}`}>{risk.label}</span>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-zinc-500/5 border-b border-[var(--border)] text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              <tr>
+                <th className="p-4">Product / Batch</th>
+                <th className="p-4">Category</th>
+                <th className="p-4">On Hand</th>
+                <th className="p-4">Unit Price</th>
+                <th className="p-4">Expiration Date</th>
+                <th className="p-4 text-center">Actions</th>
+                <th className="p-4 text-right">Risk Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)] text-sm">
+              {loading ? (
+                // SKELETON LOADING
+                [...Array(5)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan="7" className="p-8">
+                      <div className="h-4 bg-zinc-500/10 rounded w-full"></div>
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                ))
+              ) : products.length > 0 ? (
+                products.map((item) => {
+                  const risk = getRiskLevel(item.stock, item.min_stock || 5, item.expiration_date);
+                  return (
+                    <tr key={item.id} className="hover:bg-brand/5 transition-colors group">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-zinc-500/5 rounded-lg group-hover:bg-brand/10 transition-colors">
+                            <Package size={16} className="text-zinc-500 group-hover:text-brand" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[var(--foreground)] uppercase tracking-tight">{item.name}</p>
+                            <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-tighter">SKU: {item.sku}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-zinc-500 italic text-xs">{item.categories?.name || "General"}</td>
+                      <td className="p-4 font-black">
+                        {item.stock} <span className="text-[10px] font-normal text-zinc-500">units</span>
+                      </td>
+                      <td className="p-4 font-mono text-xs font-bold text-brand">
+                        ${parseFloat(item.base_price || 0).toFixed(2)}
+                      </td>
+                      <td className="p-4 text-[10px] font-mono text-zinc-400">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={14} className="text-zinc-600" />
+                          {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString() : 'NO_EXPIRY'}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="p-2 text-zinc-500 hover:text-brand hover:bg-brand/10 rounded-xl transition-all"
+                            title="Edit Protocol"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRequest(item.id)}
+                            className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                            title="Terminate Record"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border shadow-sm ${risk.style}`}>
+                          {risk.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="7" className="p-20 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-30">
+                      <Search size={40} className="text-zinc-500" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em]">No Data Found</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* FOOTER INFO */}
+        {!loading && products.length > 0 && (
+          <div className="p-4 bg-zinc-500/5 border-t border-[var(--border)] flex justify-between items-center">
+            <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+              Showing {products.length} units in current buffer
+            </p>
+            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">
+              UnitySales v1.0
+            </p>
+          </div>
+        )}
       </div>
 
       <AddProductModal
@@ -220,10 +323,10 @@ export default function InventoryPage() {
         onRefresh={loadData}
         productToEdit={editingProduct}
       />
-      <AddBatchModal 
-        isOpen={isBatchModalOpen} 
-        onClose={() => setIsBatchModalOpen(false)} 
-        products={products} 
+      <AddBatchModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        products={products}
       />
       <ConfirmDialog
         isOpen={isDeleteModalOpen}

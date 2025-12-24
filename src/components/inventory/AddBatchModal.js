@@ -190,7 +190,7 @@ export default function AddBatchModal({ isOpen, onClose, products = [] }) {
           <button
             type="submit"
             disabled={!selectedProduct}
-            className="w-full bg-brand disabled:opacity-40 disabled:grayscale hover:bg-brand/90 text-white font-black uppercase py-4 rounded-xl transition-all text-[10px] tracking-[0.3em] mt-4 active:scale-[0.98] shadow-lg shadow-brand/10"
+            className="w-full bg-brand disabled:opacity-40 disabled:grayscale hover:bg-brand/90 text-white font-black uppercase py-4 rounded-xl transition-all text-[10px] mt-4 active:scale-[0.98] shadow-lg shadow-brand/10"
           >
             Execute Registration Sequence
           </button>
