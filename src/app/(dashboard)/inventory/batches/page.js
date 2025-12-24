@@ -111,15 +111,7 @@ export default function InventoryPage() {
           <p className="text-zinc-500 text-sm">Traceability and loss prevention monitoring.</p>
         </div>
         <div className="flex justify-between items-end gap-2">
-          <button
-            className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
-            onClick={() => {
-              setEditingProduct(null);
-              setIsModalOpen(true);
-            }}
-          >
-            <Plus size={18} /> Add New Product
-          </button>
+
           <button
             className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
             onClick={() => {
@@ -219,10 +211,10 @@ export default function InventoryPage() {
         onRefresh={loadData}
         productToEdit={editingProduct}
       />
-      <AddBatchModal 
-        isOpen={isBatchModalOpen} 
-        onClose={() => setIsBatchModalOpen(false)} 
-        products={products} 
+      <AddBatchModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        products={products}
       />
       <ConfirmDialog
         isOpen={isDeleteModalOpen}
