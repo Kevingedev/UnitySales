@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }) {
         menuItems={userData.menu}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 h-full">
+      <div className="flex-1 flex flex-col min-w-0 h-full ml-20 transition-all duration-300">
         <Header
           user={userData.profile}
           isDarkMode={isDarkMode}

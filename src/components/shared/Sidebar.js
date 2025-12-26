@@ -61,7 +61,7 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
   const aiItemsToRender = aiItems || aiItemsState;
 
   return (
-    <aside className={`${isOpen ? "w-64" : "w-20"} bg-[var(--aside)] border-r border-[var(--border)] transition-all duration-300 flex flex-col shrink-0`}>
+    <aside className={`${isOpen ? "w-80" : "w-20"} fixed inset-y-0 left-0 z-50 h-full bg-[var(--aside)] border-r border-[var(--border)] transition-all duration-300 flex flex-col shadow-2xl`}>
       <div className="h-16 flex items-center justify-between px-6 border-b border-[var(--border)]">
         {isOpen && (
           <span className="font-black text-brand text-xl tracking-tighter uppercase italic">
@@ -82,7 +82,12 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
           <div key={item.id}>
             {item.children && item.children.length > 0 ? (
               /* Aquí irá el componente que se abre y cierra */
-              <NavGroup item={item} isOpen={isOpen} pathname={pathname} />
+              <NavGroup
+                item={item}
+                isOpen={isOpen}
+                pathname={pathname}
+                onClick={!isOpen ? onToggle : undefined}
+              />
             ) : (
               /* Tu NavItem actual para links simples */
               <NavItem
@@ -91,6 +96,7 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
                 label={item.label}
                 isOpen={isOpen}
                 active={pathname === item.activePath}
+                onClick={!isOpen ? onToggle : undefined}
               />
             )}
           </div>
@@ -110,6 +116,7 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
                   isOpen={isOpen}
                   isAI={item.isAI}
                   active={pathname === item.activePath}
+                  onClick={!isOpen ? onToggle : undefined}
                 />
               );
             })}

@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, AlertTriangle, Calendar, Package, MoreVertical, Sparkles, Edit, Trash2, Search, ChevronLeft, ChevronRight, DollarSign, Clock } from "lucide-react";
-import { getBatches, getProducts } from "@/lib/actions/inventory-actions";
+import { getBatches, getProducts, deleteBatch } from "@/lib/actions/inventory-actions";
 import AddBatchModal from "@/components/inventory/AddBatchModal";
 import { notify } from "@/components/ui/ToastAlert";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function BatchesPage() {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
@@ -17,6 +18,15 @@ export default function BatchesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [batchToDelete, setBatchToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Handle delete request
+  const handleDeleteRequest = (id) => {
+    setBatchToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
   // Cargar datos de lotes
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -30,7 +40,30 @@ export default function BatchesPage() {
     setLoading(false);
   }, [page, search]);
 
-// console.log("batches: ", batches);
+  const handleConfirmDelete = async () => {
+    if (!batchToDelete) return;
+
+    setIsDeleting(true);
+    const res = await deleteBatch(batchToDelete);
+
+    if (res.success) {
+      loadData(); // Recarga la tabla
+      setIsDeleteModalOpen(false);
+      // Alerta de éxito personalizada
+      notify.success('PROTOCOL_EXECUTED', {
+        description: 'El producto ha sido Eliminado con éxito.',
+      });
+    } else {
+      // Alerta de éxito personalizada
+      notify.error('SYSTEM_ERROR', {
+        description: 'No se ha podido eliminar el producto, Intente de nuevo.' + res.error,
+      });
+    }
+    setIsDeleting(false);
+    setBatchToDelete(null);
+  };
+
+  // console.log("batches: ", batches);
   // Cargar productos para el modal (una sola vez)
   useEffect(() => {
     const fetchProducts = async () => {
@@ -77,22 +110,24 @@ export default function BatchesPage() {
     return risk.label === "EXPIRED" || risk.label === "NEAR EXPIRY";
   }).length;
 
+
+
   return (
     <div className="space-y-6">
       {/* HEADER SECTION */}
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tighter italic">Batch Management</h1>
           <p className="text-zinc-500 text-sm">Track expiry dates, costs, and specific product lots.</p>
         </div>
-        <div className="flex justify-between items-end gap-2">
+        <div className="flex w-full md:w-auto justify-end">
           <button
-            className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+            className="w-full md:w-auto justify-center bg-brand text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
             onClick={() => {
               setIsBatchModalOpen(true);
             }}
           >
-            <Plus size={18} /> Add New Batch
+            <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Add New Batch
           </button>
         </div>
       </div>
@@ -170,6 +205,8 @@ export default function BatchesPage() {
                 <th className="p-4">Cost / Unit</th>
                 <th className="p-4">Received / Expiry</th>
                 <th className="p-4 text-right">Status</th>
+                <th className="p-4 text-center">Actions</th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)] text-sm">
@@ -223,6 +260,17 @@ export default function BatchesPage() {
                           {risk.label}
                         </span>
                       </td>
+                      <td className="p-4">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleDeleteRequest(batch.id)}
+                            className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                            title="Terminate Record"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
@@ -259,6 +307,14 @@ export default function BatchesPage() {
           loadData(); // Recargar datos al cerrar modal (por si se creó uno)
         }}
         products={productsForModal}
+      />
+      <ConfirmDialog
+        isOpen={isDeleteModalOpen}
+        loading={isDeleting}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Batch"
+        message={`¿Estás seguro de que deseas eliminar el registro del sistema? Esta acción es irreversible.`}
       />
     </div>
   );

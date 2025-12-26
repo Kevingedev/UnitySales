@@ -1,8 +1,11 @@
 import Link from "next/link";
 
-export default function NavItem({ icon, label, isOpen, active = false, isAI = false, href }) {
+export default function NavItem({ icon, label, isOpen, active = false, isAI = false, href, onClick }) {
   return (
-    <Link href={href} className={`
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`
       w-full flex items-center p-3 rounded-lg cursor-pointer transition-all border-none
       ${active ? "bg-brand text-white shadow-md shadow-brand/30" : "hover:bg-brand/10 text-zinc-500 hover:text-brand"}
       ${isAI && !active ? "border border-brand/20" : ""}

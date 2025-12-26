@@ -43,30 +43,36 @@ export async function getProducts(page = 1, limit = 10, search = "") {
 
 // Funncion para agregar un nuevo batch
 export async function createProduct(formData) {
-  const supabase = await createClient(); // Conexión a la base de datos
+  try {
+    const supabase = await createClient(); // Conexión a la base de datos
 
-  const productData = {
-    sku: formData.get("sku"), // SKU del producto
-    name: formData.get("name"), // Nombre del producto
-    category_id: formData.get("category"), // Categoría del producto
-    base_price: parseFloat(formData.get("base_price")), // Precio base del producto
-    cost_price: parseFloat(formData.get("cost_price")), // Precio de costo del producto
-    stock: parseInt(formData.get("stock") || 0), // Stock del producto
-    min_stock: parseInt(formData.get("min_stock") || 0), // Stock mínimo del producto
-    //expiration_date: formData.get("expiration_date") || null, // Fecha de expiración del producto
-  };
+    const productData = {
+      sku: formData.get("sku"), // SKU del producto
+      name: formData.get("name"), // Nombre del producto
+      category_id: formData.get("category"), // Categoría del producto
+      base_price: parseFloat(formData.get("base_price")), // Precio base del producto
+      cost_price: parseFloat(formData.get("cost_price")), // Precio de costo del producto
+      stock: parseInt(formData.get("stock") || 0), // Stock del producto
+      min_stock: parseInt(formData.get("min_stock") || 0), // Stock mínimo del producto
+      //expiration_date: formData.get("expiration_date") || null, // Fecha de expiración del producto
+    };
 
-  const { data, error } = await supabase // Insertar el producto en la base de datos
-    .from('products')
-    .insert([productData]) // Insertar los datos del producto en la base de datos
-    .select();
+    const { data, error } = await supabase // Insertar el producto en la base de datos
+      .from('products')
+      .insert([productData]) // Insertar los datos del producto en la base de datos
+      .select();
 
-  if (error) { // Si hay un error, mostrar el mensaje de error
-    console.error("Error al crear producto:", error.message);
+    if (error) { // Si hay un error, mostrar el mensaje de error
+      console.error("Error al crear producto:", error.message);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data }; // Si no hay error, devolver los datos del producto
+
+  } catch (error) {
+    console.error("Error creating product:", error.message);
     return { success: false, error: error.message };
   }
-
-  return { success: true, data }; // Si no hay error, devolver los datos del producto
 }
 
 export async function deleteProduct(id) {
@@ -136,26 +142,56 @@ export async function getCategories() {
 // Funciones para obtener los lotes de un producto
 export async function createBatch(formData) {
 
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const batchData = {
-    product_id: formData.get("product_id"),
-    batch_number: formData.get("batch_number"),
-    stock: formData.get("stock"),
-    expiration_date: formData.get("expiration_date"),
-    cost_per_unit: formData.get("cost_per_unit"),
-  }
+    const batchData = {
+      product_id: formData.get("product_id"),
+      batch_number: formData.get("batch_number"),
+      stock: formData.get("stock"),
+      expiration_date: formData.get("expiration_date"),
+      cost_per_unit: formData.get("cost_per_unit"),
+    }
 
-  const { data, error } = await supabase
-    .from('batches')
-    .insert([batchData])
-    .select();
+    const { data: newBatch, error: batchError } = await supabase
+      .from('batches')
+      .insert([batchData])
+      .select();
 
-  if (error) {
+    if (batchError) {
+      console.error("Error creating batch:", batchError.message);
+      return { success: false, error: batchError.message };
+    }
+
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', batchData.product_id)
+      .single();
+
+    if (productError) {
+      console.error("Error fetching product:", productError.message);
+      return { success: false, error: productError.message };
+    }
+    // console.log("Product:", product);
+
+    const newStock = (product.stock || 0) + parseInt(batchData.stock);
+
+    // Esta logica puede ser sustituida por un Trigger en la base de datos
+    const { error: updatedError } = await supabase
+      .from('products')
+      .update({ stock: newStock })
+      .eq('id', batchData.product_id)
+      .select();
+
+    if (updatedError) throw updatedError;
+
+    return { success: true, newBatch };
+
+  } catch (error) {
     console.error("Error creating batch:", error.message);
     return { success: false, error: error.message };
   }
-  return { success: true, data };
 
 }
 
@@ -166,7 +202,7 @@ export async function getBatches(page = 1, limit = 10, search = "") {
     const to = from + limit - 1;
 
     // ESTOY HACIENDO CONSULTA A UNA VISTA CREADA EN LA BASE DE DATOS PARA QUE ME RETORNE LOS DATOS DE LOS LOTES DE LOS PRODUCTOS
-   let query = supabase.from('batches_with_products').select('*').or(`batch_number.ilike.%${search}%,product_name.ilike.%${search}%`);
+    let query = supabase.from('batches_with_products').select('*').or(`batch_number.ilike.%${search}%,product_name.ilike.%${search}%`);
 
     const { data, error, count } = await query
       .order('received_at', { ascending: false })
@@ -174,14 +210,53 @@ export async function getBatches(page = 1, limit = 10, search = "") {
 
     if (error) throw error;
 
-    return { 
-      success: true, 
-      batches: data, 
-      totalCount: count || 0, 
-      currentPage: page 
+    return {
+      success: true,
+      batches: data,
+      totalCount: count || 0,
+      currentPage: page
     };
   } catch (error) {
     console.error("Error fetching batches:", error);
     return { success: false, batches: [], totalCount: 0 };
+  }
+}
+
+export async function deleteBatch(id) {
+
+  try {
+    const supabase = await createClient();
+
+    const { data: batchDeleted, error: batchError } = await supabase.from('batches').delete().eq('id', id).select().maybeSingle();
+
+    if (batchError) {
+      console.error("Error deleting batch:", batchError.message);
+      return { success: false, error: batchError.message };
+    }
+    console.log("Deleted batch:", batchDeleted.product_id);
+    const { data: product, error: productError } = await supabase.from('products').select('*').eq('id', batchDeleted.product_id).single();
+
+    if (productError) {
+      console.error("Error fetching product:", productError.message);
+      return { success: false, error: productError.message };
+    }
+
+    const newStock = product.stock - parseInt(batchDeleted.stock);
+
+    // Esta logica puede ser sustituida por un Trigger en la base de datos
+    const { error: updatedError } = await supabase
+      .from('products')
+      .update({ stock: newStock })
+      .eq('id', batchDeleted.product_id)
+      .select();
+
+    if (updatedError) throw updatedError;
+
+    // console.log("Deleted batch:", batchDeleted);
+    return { success: true };
+
+  } catch (error) {
+    console.error("Error deleting batch:", error.message);
+    return { success: false, error: error.message };
   }
 }

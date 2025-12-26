@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import NavItem from "@/components/shared/NavItem";
 
-export default function NavGroup({ item, isOpen, pathname }) {
+export default function NavGroup({ item, isOpen, pathname, onClick }) {
   // Estado para controlar si el submenú está desplegado
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -22,7 +22,15 @@ export default function NavGroup({ item, isOpen, pathname }) {
     <div className="flex flex-col space-y-1">
       {/* Botón Principal del Grupo */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => {
+          if (onClick) {
+            onClick();
+            // Si estamos abriendo el sidebar, también queremos expandir este grupo
+            if (!isOpen) setIsExpanded(true);
+          } else {
+            setIsExpanded(!isExpanded);
+          }
+        }}
         className={`
           flex items-center justify-between p-3 rounded-xl transition-all duration-200 group text-xs
           ${isParentActive ? "bg-brand/10 text-brand" : "text-zinc-500 hover:bg-zinc-500/5 hover:text-[var(--foreground)]"}
@@ -39,9 +47,9 @@ export default function NavGroup({ item, isOpen, pathname }) {
         </div>
 
         {isOpen && (
-          <ChevronDown 
-            size={14} 
-            className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} 
+          <ChevronDown
+            size={14}
+            className={`transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
           />
         )}
       </button>

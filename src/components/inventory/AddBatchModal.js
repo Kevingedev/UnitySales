@@ -3,7 +3,7 @@ import { Package, Hash, Calendar, DollarSign, Search, X, CheckCircle2 } from 'lu
 import { notify } from '@/components/ui/ToastAlert';
 import { createBatch } from '@/lib/actions/inventory-actions';
 
-export default function AddBatchModal({ isOpen, onClose, products = [] }) {
+export default function AddBatchModal({ isOpen, onClose, products = [], onRefresh }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -34,9 +34,10 @@ export default function AddBatchModal({ isOpen, onClose, products = [] }) {
 
     if (result.success) {
       notify.success("PROTOCOL_EXECUTED", "Lote registrado exitosamente.");
+      if (onRefresh) onRefresh();
       onClose();
     } else {
-      notify.error("PROTOCOL_EXECUTION_FAILED", "Error al registrar lote.");
+      notify.error("PROTOCOL_EXECUTION_FAILED", "Error al registrar lote: " + result.error);
     }
   };
 
@@ -181,6 +182,7 @@ export default function AddBatchModal({ isOpen, onClose, products = [] }) {
               </label>
               <input
                 type="date"
+                required
                 name="expiration_date"
                 className="w-full bg-zinc-500/5 border border-[var(--border)] rounded-xl px-4 py-2 text-sm text-[var(--foreground)] focus:ring-1 focus:ring-brand outline-none [color-scheme:dark] transition-all"
               />

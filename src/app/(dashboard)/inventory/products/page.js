@@ -16,10 +16,10 @@ export default function InventoryPage() {
   const [editingProduct, setEditingProduct] = useState(null);
 
   //ESTADOS para el buscador 
-const [search, setSearch] = useState("");
-const [page, setPage] = useState(1);
-const [totalPages, setTotalPages] = useState(1);
-const itemsPerPage = 10; // Puedes cambiar este número
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10; // Puedes cambiar este número
 
   //ESTADOS para el dialogo de Delete
   // 1. Añade estos estados
@@ -58,26 +58,26 @@ const itemsPerPage = 10; // Puedes cambiar este número
   };
 
   // 2. Memorizamos loadData para que React no crea que cambia en cada render
- const loadData = useCallback(async () => {
-  setLoading(true);
-  // Pasamos page, itemsPerPage y search a la acción del servidor
-  const response = await getProducts(page, itemsPerPage, search);
-  
-  if (response.success) {
-    setProducts(response.products);
-    // Calculamos el total de páginas basándonos en el count real de la DB
-    setTotalPages(Math.ceil((response.totalCount || 0) / itemsPerPage));
-  }
-  setLoading(false);
-}, [page, search]); // Se vuelve a ejecutar si cambia la página o la búsqueda
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    // Pasamos page, itemsPerPage y search a la acción del servidor
+    const response = await getProducts(page, itemsPerPage, search);
 
- useEffect(() => {
-  const timer = setTimeout(() => {
-    loadData();
-  }, 400); // Espera 400ms después de que dejas de escribir
+    if (response.success) {
+      setProducts(response.products);
+      // Calculamos el total de páginas basándonos en el count real de la DB
+      setTotalPages(Math.ceil((response.totalCount || 0) / itemsPerPage));
+    }
+    setLoading(false);
+  }, [page, search]); // Se vuelve a ejecutar si cambia la página o la búsqueda
 
-  return () => clearTimeout(timer);
-}, [loadData]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, 400); // Espera 400ms después de que dejas de escribir
+
+    return () => clearTimeout(timer);
+  }, [loadData]);
 
   const handleEdit = (product) => {
     setEditingProduct(product);
@@ -120,28 +120,28 @@ const itemsPerPage = 10; // Puedes cambiar este número
   return (
     <div className="space-y-6">
       {/* HEADER SECTION */}
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tighter italic">Products Management</h1>
           <p className="text-zinc-500 text-sm">Traceability and loss prevention monitoring.</p>
         </div>
-        <div className="flex justify-between items-end gap-2">
+        <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2">
           <button
-            className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+            className="w-full md:w-auto justify-center bg-brand text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
             onClick={() => {
               setEditingProduct(null);
               setIsModalOpen(true);
             }}
           >
-            <Plus size={18} /> Add New Product
+            <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Add New Product
           </button>
           <button
-            className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
+            className="w-full md:w-auto justify-center bg-brand text-white px-3 py-2 md:px-4 md:py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 hover:bg-brand/90 transition-all shadow-lg shadow-brand/20"
             onClick={() => {
               setIsBatchModalOpen(true);
             }}
           >
-            <Plus size={18} /> Add New Batch
+            <Plus size={16} className="md:w-[18px] md:h-[18px]" /> Add New Batch
           </button>
         </div>
       </div>
@@ -325,6 +325,7 @@ const itemsPerPage = 10; // Puedes cambiar este número
       />
       <AddBatchModal
         isOpen={isBatchModalOpen}
+        onRefresh={loadData}
         onClose={() => setIsBatchModalOpen(false)}
         products={products}
       />
