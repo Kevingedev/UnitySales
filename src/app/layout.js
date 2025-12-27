@@ -1,4 +1,5 @@
 // src/app/layout.js
+export const dynamic = 'force-dynamic';
 import "./globals.css";
 
 export default function RootLayout({ children }) {

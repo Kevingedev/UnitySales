@@ -72,7 +72,9 @@ export default function BatchesPage() {
       // pero por ahora traemos los primeros 100 o usamos la misma función.
       const res = await getProducts(1, 100);
       if (res.success) {
-        setProductsForModal(res.products);
+
+        const physicalOnly = res.products.filter(product => product.type === 'physical');
+        setProductsForModal(physicalOnly);
       }
     };
     fetchProducts();

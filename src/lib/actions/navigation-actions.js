@@ -1,52 +1,42 @@
 "use server";
 import { createClient } from "@/lib/supabase-server";
+import { unstable_noStore as noStore } from "next/cache";
+
 
 export async function getProtectNavigation() {
+    noStore();
     try {
         const supabase = await createClient(); 
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         
-        if (authError || !user) {
-            //console.log("Servidor: No se encontró usuario");
-            return { success: false, menu: [] };
-        }
+        if (authError || !user) return { success: false, menu: [] };
 
-        // 1. OBTENER PERFIL (Corregido pError por error)
+        // 1. OBTENER PERFIL
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('full_name, role_id, roles(rank_level)')
+            .select('full_name, role_id')
             .eq('id', user.id)
             .single();
 
-        // IMPORTANTE: Aquí usamos profileError
-        if (profileError || !profile) {
-            //console.error("Error cargando perfil:", profileError);
-            throw new Error('Profile not found');
-        }
+        if (profileError || !profile) throw new Error('Profile not found');
 
-        const userRank = profile.roles?.rank_level || 0;
-
-        // 2. TRAER MENÚ (Asegúrate de que la FKey coincida con el nombre en Supabase)
-        const { data: allMenuItems, error: mError } = await supabase
+        // 2. TRAER SOLO LOS MENÚS A LOS QUE ESTE ROL TIENE ACCESO
+        // Usamos un JOIN a través de la tabla de permisos
+        const { data: allowedMenu, error: mError } = await supabase
             .from('navigation_menu')
             .select(`
-                *, 
-                required_role:roles(rank_level)
+                *,
+                role_menu_permissions!inner(role_id)
             `)
             .eq('is_active', true)
+            .eq('role_menu_permissions.role_id', profile.role_id)
             .order('display_order');
 
         if (mError) throw mError;
 
-        // 3. FILTRADO
-        const filteredMenu = allMenuItems.filter(item => {
-            if (!item.required_role) return true;
-            return userRank >= item.required_role.rank_level;
-        });
-
         return {
             success: true,
-            menu: filteredMenu,
+            menu: allowedMenu,
             user: {
                 name: profile.full_name,
                 role: profile.role_id,
@@ -54,8 +44,7 @@ export async function getProtectNavigation() {
         };
 
     } catch (error) {
-        // Esto te dirá exactamente qué está pasando en la terminal de VS Code
-        //console.error("DEBUG - RBAC Error completo:", error.message);
+        console.error("RBAC Error:", error.message);
         return { success: false, menu: [] };
     }
 }

@@ -51,9 +51,10 @@ export async function createProduct(formData) {
       name: formData.get("name"), // Nombre del producto
       category_id: formData.get("category"), // Categoría del producto
       base_price: parseFloat(formData.get("base_price")), // Precio base del producto
-      cost_price: parseFloat(formData.get("cost_price")), // Precio de costo del producto
+      cost_price: parseFloat(formData.get("cost_price") || 0), // Precio de costo del producto
       stock: parseInt(formData.get("stock") || 0), // Stock del producto
       min_stock: parseInt(formData.get("min_stock") || 0), // Stock mínimo del producto
+      type: formData.get("type"), // Tipo del producto
       //expiration_date: formData.get("expiration_date") || null, // Fecha de expiración del producto
     };
 
@@ -95,9 +96,9 @@ export async function updateProduct(formData) {
     name: formData.get("name"),
     category_id: formData.get("category"),
     base_price: parseFloat(formData.get("base_price")),
-    cost_price: parseFloat(formData.get("cost_price")), // Assuming cost_price is in form or handled
-    stock: parseInt(formData.get("stock")),
-    min_stock: parseInt(formData.get("min_stock")),
+    cost_price: parseFloat(formData.get("cost_price") || 0), // Assuming cost_price is in form or handled
+    stock: parseInt(formData.get("stock") || 0),
+    min_stock: parseInt(formData.get("min_stock") || 0),
     expiration_date: formData.get("expiration_date") || null,
   };
 

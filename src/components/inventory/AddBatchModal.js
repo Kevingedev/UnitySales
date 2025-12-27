@@ -13,8 +13,8 @@ export default function AddBatchModal({ isOpen, onClose, products = [], onRefres
     if (term.length === 0 || selectedProduct) return [];
 
     return products.filter(p =>
-      p.name.toLowerCase().includes(term) ||
-      p.sku.toLowerCase().includes(term)
+      (p.name.toLowerCase().includes(term) ||
+      p.sku.toLowerCase().includes(term)) && p.type === 'physical'
     ).slice(0, 5);
   }, [searchTerm, products, selectedProduct]);
 

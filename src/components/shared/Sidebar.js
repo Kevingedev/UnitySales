@@ -11,18 +11,17 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
   const [navItems, setNavItems] = useState([]);
   const [aiItemsState, setAiItemsState] = useState([]);
 
-  // Cargar items de navegación desde la base de datos
-  useEffect(() => {
+  // Extraemos la lógica de carga para poder reutilizarla
+  const loadNavigation = () => {
     getProtectNavigation()
       .then((response) => {
         const itemsArray = response?.menu || [];
 
-        // Función interna para construir el árbol de navegación
+        // Tu función buildNavigationTree que ya tienes...
         const buildNavigationTree = (items, sectionName) => {
-          // 1. Filtramos los items de la sección que son "RAÍZ" (sin parent_id)
           return items
             .filter(item => item.section === sectionName && !item.parent_id)
-            .sort((a, b) => a.display_order - b.display_order) // Respetamos el orden
+            .sort((a, b) => a.display_order - b.display_order)
             .map(parent => ({
               id: parent.id,
               icon: Icons[parent.icon_name] || Icons.LayoutDashboard,
@@ -30,13 +29,12 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
               label: parent.label,
               activePath: parent.active_path,
               isAI: sectionName === "ai",
-              // 2. Buscamos y mapeamos los hijos de este padre
               children: items
                 .filter(child => child.parent_id === parent.id)
                 .sort((a, b) => a.display_order - b.display_order)
                 .map(child => ({
                   id: child.id,
-                  icon: Icons[child.icon_name] || Icons.Circle, // Icono por defecto para subitems
+                  icon: Icons[child.icon_name] || Icons.Circle,
                   href: child.href,
                   label: child.label,
                   activePath: child.active_path,
@@ -44,16 +42,26 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
             }));
         };
 
-        // Procesamos ambas secciones
         const mainItems = buildNavigationTree(itemsArray, "main");
         const aiItemsData = buildNavigationTree(itemsArray, "ai");
 
         setNavItems(mainItems);
         setAiItemsState(aiItemsData);
       })
-      .catch((error) => {
-        console.error("Error loading navigation menu:", error);
-      });
+      .catch((error) => console.error("Error loading menu:", error));
+  };
+
+  useEffect(() => {
+    // 1. Carga inicial al montar el componente
+    loadNavigation();
+
+    // 2. Suscribirse al evento de actualización
+    window.addEventListener("menu-updated", loadNavigation);
+
+    // 3. Limpieza: Eliminar el listener cuando el componente se desmonte
+    return () => {
+      window.removeEventListener("menu-updated", loadNavigation);
+    };
   }, []);
 
   // Usar props si se pasan, sino usar los items cargados dinámicamente

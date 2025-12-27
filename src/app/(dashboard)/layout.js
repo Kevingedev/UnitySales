@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/shared/Sidebar";
@@ -7,6 +8,7 @@ import { getMyProfile } from "@/lib/actions/auth-actions";
 import { getProtectNavigation } from "@/lib/actions/navigation-actions";
 import { Toaster } from "sonner";
 
+export const dynamic = 'force-dynamic';
 export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);

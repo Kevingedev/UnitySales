@@ -104,18 +104,18 @@ export default function InventoryPage() {
   };
 
   // ... (tu lógica de getRiskLevel se queda igual, está perfecta)
-  const getRiskLevel = (stock, minStock, expirationDate) => {
+  const getRiskLevel = (stock, minStock, expirationDate, type) => {
     const today = new Date();
     const expDate = expirationDate ? new Date(expirationDate) : null;
     if (expDate && expDate < today) return { label: "EXPIRED", style: "border-red-600/50 text-red-600 bg-red-600/10" };
     const daysToExpire = expDate ? (expDate - today) / (1000 * 60 * 60 * 24) : 999;
     if (daysToExpire < 30) return { label: "NEAR EXPIRY", style: "border-orange-500/50 text-orange-500 bg-orange-500/10" };
-    if (stock === 0) return { label: "OUT OF STOCK", style: "border-red-500/50 text-red-500 bg-red-500/10" };
-    if (stock <= minStock) return { label: "LOW STOCK", style: "border-amber-500/50 text-amber-500 bg-amber-500/10" };
+    if (stock === 0 && type === 'physical') return { label: "OUT OF STOCK", style: "border-red-500/50 text-red-500 bg-red-500/10" };
+    if (stock <= minStock && type === 'physical') return { label: "LOW STOCK", style: "border-amber-500/50 text-amber-500 bg-amber-500/10" };
     return { label: "OPTIMAL", style: "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" };
   };
 
-  const lossRiskCount = products.filter(p => p.stock <= (p.min_stock || 5)).length;
+  const lossRiskCount = products.filter(p => (p.stock <= (p.min_stock || 5)) && p.type === 'physical').length;
 
   return (
     <div className="space-y-6">
@@ -163,7 +163,7 @@ export default function InventoryPage() {
           <p className="text-brand text-[10px] font-bold uppercase tracking-widest">AI Suggestion</p>
           <p className="text-sm font-medium mt-1">
             {lossRiskCount > 0
-              ? `Restock required for ${products.find(p => p.stock <= p.min_stock)?.name || 'various items'}`
+              ? `Restock required for ${products.find(p => (p.stock <= p.min_stock) && p.type === 'physical')?.name || 'various items'}`
               : "Inventory levels are stable. No actions required."}
           </p>
         </div>
@@ -237,7 +237,7 @@ export default function InventoryPage() {
                 ))
               ) : products.length > 0 ? (
                 products.map((item) => {
-                  const risk = getRiskLevel(item.stock, item.min_stock || 5, item.expiration_date);
+                  const risk = getRiskLevel(item.stock, item.min_stock || 5, item.expiration_date, item.type);
                   return (
                     <tr key={item.id} className="hover:bg-brand/5 transition-colors group">
                       <td className="p-4">
@@ -253,7 +253,11 @@ export default function InventoryPage() {
                       </td>
                       <td className="p-4 text-zinc-500 italic text-xs">{item.categories?.name || "General"}</td>
                       <td className="p-4 font-black">
-                        {item.stock} <span className="text-[10px] font-normal text-zinc-500">units</span>
+                        {item.type === 'physical' ? (
+                          <span className="text-[var(--foreground)]">{item.stock} <span className="text-[10px] font-normal text-zinc-500">units</span></span>
+                        ) : (
+                          <span className="text-[10px] font-normal text-zinc-500">N/A</span>
+                        )}
                       </td>
                       <td className="p-4 font-mono text-xs font-bold text-brand">
                         ${parseFloat(item.base_price || 0).toFixed(2)}
