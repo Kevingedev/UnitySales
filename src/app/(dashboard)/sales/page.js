@@ -16,6 +16,8 @@ export default function SalesPage() {
     decreaseQuantity,
     removeFromCart,
     clearCart,
+    subtotal,
+    totalTax,
     totalPrice,
     totalItems,
     totalUnits,
@@ -88,7 +90,7 @@ export default function SalesPage() {
       <div className="lg:col-span-5 h-full overflow-hidden">
         <Cart
           items={cart}
-          totals={{ totalPrice, totalItems, totalUnits }}
+          totals={{ subtotal, totalTax, totalPrice, totalItems, totalUnits }}
           actions={{
             onIncrease: addToCart,
             onDecrease: decreaseQuantity,

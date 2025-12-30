@@ -5,16 +5,13 @@ const STORAGE_KEY = "unity_sales_cart";
 
 /**
  * Hook profesional para gestión de carrito de ventas.
- * Incluye persistencia en localStorage y optimización de rendimiento usando Map.
- * 
- * @returns {Object} API del carrito
+ * Optimizado para retail: Maneja precios con IVA incluido y extrae la base imponible.
  */
 export function useCart() {
-    // Estado inicial lazy para leer de localStorage solo una vez al montar
     const [cart, setCart] = useState([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // 1. Cargar estado persistente al montar (Client-side only)
+    // 1. Cargar estado persistente al montar
     useEffect(() => {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
@@ -28,15 +25,14 @@ export function useCart() {
         }
     }, []);
 
-    // 2. Guardar en localStorage cada vez que cambia el carrito
+    // 2. Persistir cambios en localStorage
     useEffect(() => {
         if (isLoaded) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
         }
     }, [cart, isLoaded]);
 
-    // OPTIMIZACIÓN: Crear un mapa de acceso rápido { id: quantity }
-    // Esto permite verificar stock en O(1) en lugar de O(N)
+    // Mapa de acceso rápido para stock y UI
     const cartMap = useMemo(() => {
         return cart.reduce((acc, item) => {
             acc[item.id] = item.quantity;
@@ -44,13 +40,10 @@ export function useCart() {
         }, {});
     }, [cart]);
 
-    // Acciones atomicas estables (useCallback para evitar re-renders en hijos)
-
     const addToCart = useCallback((product) => {
         setCart((prev) => {
             const currentQty = prev.find((p) => p.id === product.id)?.quantity || 0;
 
-            // Validación de stock estricta
             if (currentQty >= product.stock) return prev;
 
             if (currentQty > 0) {
@@ -58,6 +51,7 @@ export function useCart() {
                     item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
+            // Aseguramos que el producto entre con su base_price y tax_rate de la DB
             return [...prev, { ...product, quantity: 1 }];
         });
     }, []);
@@ -79,17 +73,46 @@ export function useCart() {
 
     const clearCart = useCallback(() => {
         setCart([]);
-        localStorage.removeItem(STORAGE_KEY);
+        if (typeof window !== "undefined") {
+            localStorage.removeItem(STORAGE_KEY);
+        }
     }, []);
 
-    // Totales memorizados
-    const totals = useMemo(() => ({
-        totalPrice: cart.reduce((acc, item) => acc + item.base_price * item.quantity, 0),
-        totalItems: cart.length,
-        totalUnits: cart.reduce((acc, item) => acc + item.quantity, 0)
-    }), [cart]);
+    /**
+     * CÁLCULOS FINANCIEROS (RETAIL)
+     * Basado en extracción de IVA desde Precio Final (PVP)
+     */
+    const totals = useMemo(() => {
+        return cart.reduce((acc, item) => {
+            const quantity = item.quantity;
+            const pvpUnitario = item.base_price; // Lo que el cliente ve en estante
+            const taxRate = item.tax_rate || 0;
 
-    // Función helper optimizada O(1)
+            // 1. Total bruto de la línea (PVP total)
+            const lineTotal = pvpUnitario * quantity;
+
+            // 2. Extraer Base Imponible (Neto)
+            // Usamos redondeo a 4 decimales para cálculos internos de precisión
+            const lineNet = parseFloat((lineTotal / (1 + (taxRate / 100))).toFixed(4));
+
+            // 3. Cuota de IVA (Diferencia)
+            const lineTax = parseFloat((lineTotal - lineNet).toFixed(2));
+
+            acc.subtotal += lineNet;
+            acc.totalTax += lineTax;
+            acc.totalPrice += lineTotal;
+            acc.totalUnits += quantity;
+
+            return acc;
+        }, {
+            subtotal: 0,
+            totalTax: 0,
+            totalPrice: 0,
+            totalItems: cart.length,
+            totalUnits: 0
+        });
+    }, [cart]);
+
     const getQuantity = useCallback((productId) => cartMap[productId] || 0, [cartMap]);
 
     return {
@@ -99,7 +122,12 @@ export function useCart() {
         removeFromCart,
         clearCart,
         getQuantity,
-        ...totals,
-        isLoaded // Para evitar hydration mismatch
+        // Totales formateados a 2 decimales para la UI
+        subtotal: parseFloat(totals.subtotal.toFixed(2)),
+        totalTax: parseFloat(totals.totalTax.toFixed(2)),
+        totalPrice: parseFloat(totals.totalPrice.toFixed(2)),
+        totalUnits: totals.totalUnits,
+        totalItems: totals.totalItems,
+        isLoaded
     };
 }

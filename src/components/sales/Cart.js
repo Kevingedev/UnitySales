@@ -48,13 +48,26 @@ export default function Cart({
                             <div className="flex justify-between items-start mb-3">
                                 <div className="pr-4">
                                     <p className="text-sm font-bold text-[var(--foreground)] leading-snug">{item.name}</p>
-                                    <p className="text-[10px] text-zinc-500 font-medium font-mono mt-0.5 uppercase tracking-tighter">
-                                        ${item.base_price.toFixed(2)} unit
+                                    <div className="flex flex-wrap items-center gap-x-2 mt-0.5">
+                                        <p className="text-[10px] text-zinc-500 font-medium font-mono uppercase tracking-tighter">
+                                            ${item.base_price.toFixed(2)}
+                                        </p>
+                                        {/* Badge de IVA extraído */}
+                                        <div className="flex items-center gap-1 bg-zinc-500/5 px-1.5 py-0.5 rounded border border-[var(--border)]">
+                                            <span className="text-[9px] font-bold text-zinc-500">IVA {(item.tax_rate || 0)}%</span>
+                                            {/* Cálculo: PrecioBase - (PrecioBase / 1.Rate) */}
+                                            <span className="text-[9px] text-zinc-400">(${((item.base_price * item.quantity) - ((item.base_price * item.quantity) / (1 + (item.tax_rate || 0) / 100))).toFixed(2)})</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-black text-sm text-brand">
+                                        ${(item.base_price * item.quantity).toFixed(2)}
+                                    </p>
+                                    <p className="text-[9px] text-zinc-400 font-mono text-right">
+                                        Inc. Tax
                                     </p>
                                 </div>
-                                <p className="font-black text-sm text-brand">
-                                    ${(item.base_price * item.quantity).toFixed(2)}
-                                </p>
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -93,14 +106,21 @@ export default function Cart({
             {/* 3. Footer: Resumen y Checkout */}
             <div className="p-5 bg-[var(--aside)] border-t border-[var(--border)] space-y-4">
                 <div className="space-y-2">
+                    {/* Desglose de Totales (Extracción) */}
                     <div className="flex justify-between text-xs font-medium text-zinc-500">
-                        <span>Subtotal ({totals.totalUnits} units)</span>
-                        <span className="text-[var(--foreground)]/70">${totals.totalPrice.toFixed(2)}</span>
+                        <span>Subtotal (Net)</span>
+                        <span className="text-[var(--foreground)]/70 font-mono">${(totals.subtotal || 0).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between items-end pt-2 border-t border-[var(--border)]">
+                    <div className="flex justify-between text-xs font-medium text-zinc-500">
+                        <span className="flex items-center gap-1">Included Tax (IVA)</span>
+                        <span className="text-[var(--foreground)]/70 font-mono">${(totals.totalTax || 0).toFixed(2)}</span>
+                    </div>
+
+                    {/* Línea Divisoria y Total Final */}
+                    <div className="flex justify-between items-end pt-3 border-t border-[var(--border)] mt-2">
                         <span className="text-sm font-bold text-[var(--foreground)] uppercase tracking-tight">Total to Pay</span>
                         <span className="text-2xl font-black text-brand tracking-tight">
-                            ${totals.totalPrice.toFixed(2)}
+                            ${(totals.totalPrice || 0).toFixed(2)}
                         </span>
                     </div>
                 </div>
