@@ -119,7 +119,7 @@ export default function BatchesPage() {
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-black uppercase tracking-tighter italic">Batch Management</h1>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-brand">Batch Management</h1>
           <p className="text-zinc-500 text-sm">Track expiry dates, costs, and specific product lots.</p>
         </div>
         <div className="flex w-full md:w-auto justify-end">

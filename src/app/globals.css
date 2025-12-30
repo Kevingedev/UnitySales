@@ -31,17 +31,17 @@ body {
 
 /* 1. ESTADO POR DEFECTO (MODO CLARO) */
 :root {
-  --background: #f9f9f9;
+  --background: #f3f3f3;
   --foreground: #2f2f2f;
-  --card: #f3f3f3;
+  --card: #eee;
   --border: #e5e5e5;
-  --aside: #f3f4f6;
+  --aside: #eee;
 }
 
 /* 2. ESTADO CUANDO EXISTE LA CLASE .dark (MODO OSCURO) */
 .dark {
   --background: #0a0a0a;
-  --foreground: #ffffff;
+  --foreground: #f2f2f2;
   --card: #101010;
   --border: #1a1a1a;
   --aside: #101010;
@@ -57,7 +57,8 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   overflow: hidden;
 }
@@ -67,18 +68,52 @@ html, body {
   border-color: var(--border);
 }
 
+/* Scrollbar Personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
+  opacity: 0.2;
+}
+
 /* --- ANIMACIONES NEURAL PROTOCOL --- */
 
 /* 1. Vibración para el Modal de Confirmación */
 @keyframes system-shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
 }
 
 .animate-system-shake {
-  animation: system-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  animation: system-shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
 }
-
-
-

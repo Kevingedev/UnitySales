@@ -11,10 +11,11 @@ export default async function AdminPermissionsPage() {
     }
 
     return (
-        <div className="p-8 space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500">
             <header className="flex flex-col gap-1">
-                <h1 className="text-4xl font-black italic uppercase tracking-tighter text-brand italic">
-                    Security & RBAC
+                <h1 className="text-4xl font-black uppercase tracking-tighter text-brand">
+                    Security & RBAC 
+                    {/* segurity & role based access control */}
                 </h1>
                 <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.3em]">
                     Control de Acceso Basado en Roles / Matriz de Permisos

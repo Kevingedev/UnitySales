@@ -122,7 +122,7 @@ export default function InventoryPage() {
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-black uppercase tracking-tighter italic">Products Management</h1>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-brand">Products Management</h1>
           <p className="text-zinc-500 text-sm">Traceability and loss prevention monitoring.</p>
         </div>
         <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2">

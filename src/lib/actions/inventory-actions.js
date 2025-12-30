@@ -55,6 +55,7 @@ export async function createProduct(formData) {
       stock: parseInt(formData.get("stock") || 0), // Stock del producto
       min_stock: parseInt(formData.get("min_stock") || 0), // Stock mínimo del producto
       type: formData.get("type"), // Tipo del producto
+      tax_rate: parseFloat(formData.get("tax_rate") || 0), // Tasa de impuesto
       //expiration_date: formData.get("expiration_date") || null, // Fecha de expiración del producto
     };
 
@@ -100,6 +101,7 @@ export async function updateProduct(formData) {
     stock: parseInt(formData.get("stock") || 0),
     min_stock: parseInt(formData.get("min_stock") || 0),
     expiration_date: formData.get("expiration_date") || null,
+    tax_rate: parseFloat(formData.get("tax_rate") || 0),
   };
 
   // Remove cost_price if NaN (not in form?) - checking original file, createProduct uses it.
