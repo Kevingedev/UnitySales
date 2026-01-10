@@ -19,7 +19,7 @@ export async function getProducts(page = 1, limit = 10, search = "") {
     // 3. Aplicar filtros si hay búsqueda
     if (search) {
       // Busca en el nombre O en el SKU (insensible a mayúsculas)
-      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+      query = query.or(`sku.ilike.%${search}%,name.ilike.%${search}%`);
     }
 
     // 4. Aplicar paginación y orden

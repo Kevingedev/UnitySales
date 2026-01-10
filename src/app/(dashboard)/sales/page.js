@@ -1,12 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getProducts, processTransaction } from "@/lib/actions/sales-actions";
 import { ProductCatalog, Cart, useCart } from "@/components/sales";
 
 export default function SalesPage() {
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   // Hook optimizado con persistencia
@@ -25,22 +26,49 @@ export default function SalesPage() {
     isLoaded
   } = useCart();
 
-  // Carga inicial de datos
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const response = await getProducts();
-        if (response.success) {
-          setProducts(response.products);
-        }
-      } catch (error) {
-        console.error("Error loading catalogue:", error);
-      } finally {
-        setLoading(false);
+  // Función para cargar productos con filtro de búsqueda
+  const fetchProducts = useCallback(async (search = "", isInitial = false) => {
+    if (isInitial) {
+      setInitialLoading(true);
+    } else {
+      setSearching(true);
+    }
+    try {
+      const response = await getProducts(search);
+      if (response.success) {
+        setProducts(response.products || []);
+      } else {
+        console.error("Error loading products:", response.error);
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error("Error loading catalogue:", error);
+      setProducts([]);
+    } finally {
+      if (isInitial) {
+        setInitialLoading(false);
+      } else {
+        setSearching(false);
       }
     }
-    fetchProducts();
   }, []);
+
+  // Carga inicial de datos
+  useEffect(() => {
+    fetchProducts("", true);
+  }, [fetchProducts]);
+
+  // Efecto para buscar productos cuando cambia el searchQuery (con debounce)
+  useEffect(() => {
+    // No hacer búsqueda en la carga inicial
+    if (initialLoading) return;
+
+    const timeoutId = setTimeout(() => {
+      fetchProducts(searchQuery, false);
+    }, 400); // Debounce de 400ms para evitar demasiadas consultas
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, fetchProducts, initialLoading]);
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -61,8 +89,8 @@ export default function SalesPage() {
     }
   };
 
-  // Prevenir flash de contenido incorrecto antes de cargar localStorage
-  if (!isLoaded || loading) {
+  // Prevenir flash de contenido incorrecto antes de cargar localStorage o en carga inicial
+  if (!isLoaded || initialLoading) {
     return (
       <div className="h-[calc(100vh-120px)] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -83,6 +111,7 @@ export default function SalesPage() {
           setSearchQuery={setSearchQuery}
           onAddToCart={addToCart}
           getQuantity={getQuantity}
+          isLoading={searching}
         />
       </div>
 

@@ -8,6 +8,7 @@ import NeuralSelect from "@/components/inventory/NeutralSelect";
 import * as LucideIcons from "lucide-react";
 import { notify } from "@/components/ui/ToastAlert";
 import { getMenuManagementData, upsertNavigationItem, deleteNavigationItem } from "@/lib/actions/menu-actions";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 // Dynamic Icon Component
 const DynamicIcon = ({ name, size = 16, className }) => {
@@ -19,6 +20,10 @@ export default function MenuManagement() {
     const [isLoading, setIsLoading] = useState(true);
     const [menuItems, setMenuItems] = useState([]);
     const [roles, setRoles] = useState([]);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deletingItemId, setDeletingItemId] = useState(null);
+    const [autoGenerateRoute, setAutoGenerateRoute] = useState(true); // Control para auto-generación
     const [formData, setFormData] = useState({
         id: null,
         label: "",
@@ -36,6 +41,52 @@ export default function MenuManagement() {
         loadData();
     }, []);
 
+    // Función para generar ruta automáticamente desde el label
+    const generateRouteFromLabel = (label, parentId = null) => {
+        if (!label) return "";
+
+        // Normalizar el label: convertir a minúsculas, reemplazar espacios y caracteres especiales
+        let route = label
+            .toLowerCase()
+            .trim()
+            .normalize("NFD") // Normalizar caracteres acentuados
+            .replace(/[\u0300-\u036f]/g, "") // Eliminar diacríticos
+            .replace(/[^a-z0-9\s-]/g, "") // Eliminar caracteres especiales excepto espacios y guiones
+            .replace(/\s+/g, "-") // Reemplazar espacios con guiones
+            .replace(/-+/g, "-") // Reemplazar múltiples guiones con uno solo
+            .replace(/^-|-$/g, ""); // Eliminar guiones al inicio y final
+
+        // Si hay un padre, obtener su ruta base
+        if (parentId && parentId !== "null" && menuItems.length > 0) {
+            const parent = menuItems.find(item => item.id === parentId);
+            if (parent && parent.href) {
+                // Extraer la ruta base del padre (sin la barra inicial/final si existe)
+                const parentRoute = parent.href.replace(/^\/|\/$/g, "").trim();
+                if (parentRoute) {
+                    route = `${parentRoute}/${route}`;
+                }
+            }
+        }
+
+        // Limpiar múltiples slashes consecutivos y asegurar formato correcto
+        route = route.replace(/\/+/g, "/"); // Reemplazar múltiples slashes
+        route = route.replace(/^\//, "").replace(/\/$/, ""); // Remover slashes al inicio y final
+
+        // Asegurar que comience con /
+        return route ? `/${route}` : "";
+    };
+
+    // Función para generar active_path automáticamente desde href
+    const generateActivePath = (href) => {
+        if (!href) return "";
+        // Extraer la primera parte de la ruta para el active_path
+        const pathParts = href.split("/").filter(part => part);
+        if (pathParts.length > 0) {
+            return `/${pathParts[0]}`;
+        }
+        return href;
+    };
+
     const loadData = async () => {
         setIsLoading(true);
         try {
@@ -45,13 +96,14 @@ export default function MenuManagement() {
                 setRoles(res.roles);
             }
         } catch (error) {
-            toast.error("Error al cargar datos");
+            notify.error("Error al cargar datos");
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleEdit = (item) => {
+        setAutoGenerateRoute(false); // Desactivar auto-generación al editar
         setFormData({
             id: item.id,
             label: item.label,
@@ -67,6 +119,7 @@ export default function MenuManagement() {
     };
 
     const handleReset = () => {
+        setAutoGenerateRoute(true); // Reactivar auto-generación al resetear
         setFormData({
             id: null,
             label: "",
@@ -82,17 +135,23 @@ export default function MenuManagement() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm("¿Eliminar este ítem permanentemente?")) return;
+        setIsDeleteModalOpen(true);
+        setDeletingItemId(id);
+    };
 
-        const res = await deleteNavigationItem(id);
+    const handleConfirmDelete = async () => {
+        setIsDeleting(true);
+        const res = await deleteNavigationItem(deletingItemId);
         if (res.success) {
             notify.success("Ítem eliminado");
             window.dispatchEvent(new Event("menu-updated"));
             loadData();
-            if (formData.id === id) handleReset();
+            setIsDeleteModalOpen(false);
+            setDeletingItemId(null);
         } else {
             notify.error(res.error || "Error al eliminar");
         }
+        setIsDeleting(false);
     };
 
     const handleSubmit = async (e) => {
@@ -111,7 +170,7 @@ export default function MenuManagement() {
             notify.success(formData.id ? "Ítem actualizado" : "Ítem creado");
             window.dispatchEvent(new Event("menu-updated"));
             loadData();
-            handleReset();
+            handleReset(); // handleReset ya reactiva autoGenerateRoute
         } else {
             notify.error(res.error || "Error al guardar");
         }
@@ -252,7 +311,20 @@ export default function MenuManagement() {
                                 type="text"
                                 required
                                 value={formData.label}
-                                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                                onChange={(e) => {
+                                    const newLabel = e.target.value;
+                                    let updates = { label: newLabel };
+
+                                    // Auto-generar ruta solo si está habilitado y es un nuevo item (no editando)
+                                    if (autoGenerateRoute && !formData.id) {
+                                        const generatedHref = generateRouteFromLabel(newLabel, formData.parent_id);
+                                        const generatedActivePath = generateActivePath(generatedHref);
+                                        updates.href = generatedHref;
+                                        updates.active_path = generatedActivePath || generatedHref;
+                                    }
+
+                                    setFormData({ ...formData, ...updates });
+                                }}
                                 className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs font-medium text-[var(--foreground)] focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/50 transition-all placeholder:text-zinc-500"
                                 placeholder="Dashboard"
                             />
@@ -273,14 +345,29 @@ export default function MenuManagement() {
 
                     {/* HREF & ACTIVE PATH */}
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Ruta (HREF)</label>
+                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+                            <span>Ruta (HREF)</span>
+                            {!formData.id && (
+                                <span className="text-[8px] text-brand font-medium">Auto-generado</span>
+                            )}
+                        </label>
                         <div className="relative">
                             <LinkIcon size={12} className="absolute left-3 top-2.5 text-zinc-600" />
                             <input
                                 type="text"
                                 required
                                 value={formData.href}
-                                onChange={(e) => setFormData({ ...formData, href: e.target.value })}
+                                onChange={(e) => {
+                                    const newHref = e.target.value;
+                                    // Si el usuario edita manualmente el href, actualizar active_path automáticamente
+                                    const generatedActivePath = generateActivePath(newHref);
+                                    setFormData({
+                                        ...formData,
+                                        href: newHref,
+                                        active_path: generatedActivePath || newHref
+                                    });
+                                    setAutoGenerateRoute(false); // Desactivar auto-generación si edita manualmente
+                                }}
                                 className="w-full bg-[var(--background)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-2 text-xs font-mono text-brand focus:outline-none focus:border-brand/50 transition-all placeholder:text-zinc-500"
                                 placeholder="/inventory/batches"
                             />
@@ -288,7 +375,12 @@ export default function MenuManagement() {
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Active Path Pattern</label>
+                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+                            <span>Active Path Pattern</span>
+                            {!formData.id && (
+                                <span className="text-[8px] text-brand font-medium">Auto-generado</span>
+                            )}
+                        </label>
                         <input
                             type="text"
                             value={formData.active_path}
@@ -323,7 +415,17 @@ export default function MenuManagement() {
                         <div className="space-y-1">
                             <NeuralSelect
                                 value={formData.parent_id}
-                                onChange={(val) => setFormData({ ...formData, parent_id: val })}
+                                onChange={(val) => {
+                                    let updates = { parent_id: val };
+                                    // Si auto-generación está activada y hay un label, regenerar la ruta con el nuevo padre
+                                    if (autoGenerateRoute && !formData.id && formData.label) {
+                                        const generatedHref = generateRouteFromLabel(formData.label, val);
+                                        const generatedActivePath = generateActivePath(generatedHref);
+                                        updates.href = generatedHref;
+                                        updates.active_path = generatedActivePath || generatedHref;
+                                    }
+                                    setFormData({ ...formData, ...updates });
+                                }}
                                 label="Padre"
                                 placeholder="-- Raíz --"
                                 icon={FolderOpen}
@@ -389,6 +491,14 @@ export default function MenuManagement() {
                     </div>
                 </form>
             </div>
+            <ConfirmDialog
+                isOpen={isDeleteModalOpen}
+                loading={isDeleting}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Product"
+                message={`¿Estás seguro de que deseas eliminar el registro del sistema? Esta acción es irreversible.`}
+            />
         </div>
     );
 }

@@ -35,7 +35,7 @@ const ProductCard = memo(({ product, quantityInCart, onAdd }) => {
             )}
 
             <div>
-                <h3 className="font-bold text-[var(--foreground)] leading-tight">{product.name}</h3>
+                <h3 className="font-bold text-[var(--foreground)] leading-tight">{product.name} <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">{product.sku}</span></h3>
                 <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-brand font-black text-lg">${product.base_price.toFixed(2)}</span>
                     <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
@@ -68,13 +68,10 @@ export default function ProductCatalog({
     searchQuery,
     setSearchQuery,
     onAddToCart,
-    getQuantity
+    getQuantity,
+    isLoading = false
 }) {
-    // Filtrado optimizado: si no hay query, devuelve la lista original (referencia estable)
-    const filteredProducts = !searchQuery
-        ? products
-        : products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
+    // Los productos ya vienen filtrados del servidor, solo los renderizamos
     return (
         <div className="flex flex-col h-full space-y-4">
             {/* Header & Búsqueda */}
@@ -86,21 +83,30 @@ export default function ProductCatalog({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search items..."
-                    className="w-full pl-10 pr-4 py-3 bg-[var(--card)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all font-medium text-sm shadow-sm text-[var(--foreground)] placeholder:text-zinc-500"
+                    placeholder="Search by name or SKU..."
+                    disabled={isLoading}
+                    className="w-full pl-10 pr-4 py-3 bg-[var(--card)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all font-medium text-sm shadow-sm text-[var(--foreground)] placeholder:text-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
             </div>
 
             {/* Grid de Productos - Con scroll independiente */}
             <div className="flex-1 overflow-y-auto min-h-0 pr-1 pb-2">
-                {filteredProducts.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center h-48 text-zinc-500">
+                        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mb-3" />
+                        <p className="text-sm font-medium">Searching products...</p>
+                    </div>
+                ) : products.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-48 text-zinc-500">
                         <Package size={40} strokeWidth={1.5} className="mb-2 opacity-50" />
                         <p className="text-sm font-medium">No products found</p>
+                        {searchQuery && (
+                            <p className="text-xs text-zinc-400 mt-1">Try a different search term</p>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                        {filteredProducts.map(product => (
+                        {products.map(product => (
                             <ProductCard
                                 key={product.id}
                                 product={product}
@@ -114,7 +120,7 @@ export default function ProductCatalog({
 
             {/* Footer del catálogo (info rápida) */}
             <div className="text-[10px] text-zinc-500 text-center uppercase tracking-widest font-semibold pt-2 border-t border-[var(--border)]">
-                {filteredProducts.length} items available
+                {products.length} {products.length === 1 ? 'item' : 'items'} available
             </div>
         </div>
     );
