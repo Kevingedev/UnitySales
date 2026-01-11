@@ -8,7 +8,7 @@ import { getMyProfile } from "@/lib/actions/auth-actions";
 import { getProtectNavigation } from "@/lib/actions/navigation-actions";
 import { Toaster } from "sonner";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }) {
       console.log("menuRes", menuRes); */
       setUserData({
         profile: profileRes.success ? profileRes.data : null,
-        menu: menuRes.success ? menuRes.menu : []
+        menu: menuRes.success ? menuRes.menu : [],
       });
       setMounted(true);
     }
@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     if (!mounted) return;
-    document.documentElement.classList.toggle('dark', isDarkMode);
+    document.documentElement.classList.toggle("dark", isDarkMode);
     localStorage.setItem("theme", isDarkMode ? "dark" : "light");
   }, [isDarkMode, mounted]);
 
@@ -57,7 +57,7 @@ export default function DashboardLayout({ children }) {
         menuItems={userData.menu}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 h-full ml-20 transition-all duration-300">
+      <div className="flex-1 flex flex-col min-w-0 h-full transition-all duration-300">
         <Header
           user={userData.profile}
           isDarkMode={isDarkMode}
@@ -73,7 +73,8 @@ export default function DashboardLayout({ children }) {
               toastOptions={{
                 unstyled: true,
                 // Esto asegura que el contenedor no limite el tamaño de tus notificaciones
-                className: 'pointer-events-auto flex justify-end items-start p-4',
+                className:
+                  "pointer-events-auto flex justify-end items-start p-4",
               }}
               /* Espacio entre notificaciones */
               gap={12}

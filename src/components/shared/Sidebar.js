@@ -6,8 +6,13 @@ import NavItem from "./NavItem";
 import { getProtectNavigation } from "@/lib/actions/navigation-actions";
 import NavGroup from "./sidebar/NavGroup";
 
-
-export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, aiItems }) {
+export default function Sidebar({
+  isOpen,
+  onToggle,
+  pathname,
+  navigationItems,
+  aiItems,
+}) {
   const [navItems, setNavItems] = useState([]);
   const [aiItemsState, setAiItemsState] = useState([]);
 
@@ -20,9 +25,9 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
         // Tu función buildNavigationTree que ya tienes...
         const buildNavigationTree = (items, sectionName) => {
           return items
-            .filter(item => item.section === sectionName && !item.parent_id)
+            .filter((item) => item.section === sectionName && !item.parent_id)
             .sort((a, b) => a.display_order - b.display_order)
-            .map(parent => ({
+            .map((parent) => ({
               id: parent.id,
               icon: Icons[parent.icon_name] || Icons.LayoutDashboard,
               href: parent.href,
@@ -30,15 +35,15 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
               activePath: parent.active_path,
               isAI: sectionName === "ai",
               children: items
-                .filter(child => child.parent_id === parent.id)
+                .filter((child) => child.parent_id === parent.id)
                 .sort((a, b) => a.display_order - b.display_order)
-                .map(child => ({
+                .map((child) => ({
                   id: child.id,
                   icon: Icons[child.icon_name] || Icons.Circle,
                   href: child.href,
                   label: child.label,
                   activePath: child.active_path,
-                }))
+                })),
             }));
         };
 
@@ -69,7 +74,9 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
   const aiItemsToRender = aiItems || aiItemsState;
 
   return (
-    <aside className={`${isOpen ? "w-80" : "w-20"} fixed inset-y-0 left-0 z-50 h-full bg-[var(--aside)] border-r border-[var(--border)] transition-all duration-300 flex flex-col shadow-2xl`}>
+    <aside
+      className={`${isOpen ? "w-80" : "w-20"} h-full bg-[var(--aside)] border-r border-[var(--border)] transition-all duration-300 flex flex-col shadow-2xl shrink-0`}
+    >
       <div className="h-16 flex items-center justify-between px-6 border-b border-[var(--border)]">
         {isOpen && (
           <span className="font-black text-brand text-xl tracking-tighter uppercase italic">
@@ -134,4 +141,3 @@ export default function Sidebar({ isOpen, onToggle, pathname, navigationItems, a
     </aside>
   );
 }
-

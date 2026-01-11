@@ -25,95 +25,164 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 } */
 @theme {
-  --color-brand: #7c3aed;
-  --color-brand-hover: #6d28d9;
+    --color-brand: #7c3aed;
+    --color-brand-hover: #6d28d9;
 }
 
 /* 1. ESTADO POR DEFECTO (MODO CLARO) */
 :root {
-  --background: #f3f3f3;
-  --foreground: #2f2f2f;
-  --card: #eee;
-  --border: #e5e5e5;
-  --aside: #eee;
+    --background: #f3f3f3;
+    --foreground: #2f2f2f;
+    --card: #eee;
+    --border: #e5e5e5;
+    --aside: #eee;
 }
 
 /* 2. ESTADO CUANDO EXISTE LA CLASE .dark (MODO OSCURO) */
 .dark {
-  --background: #0a0a0a;
-  --foreground: #f2f2f2;
-  --card: #101010;
-  --border: #1a1a1a;
-  --aside: #101010;
+    --background: #0a0a0a;
+    --foreground: #f2f2f2;
+    --card: #101010;
+    --border: #1a1a1a;
+    --aside: #101010;
 }
 
 /* 3. APLICACIÓN DE LAS VARIABLES */
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  margin: 0;
-  /* La transición es clave para que el cambio no sea brusco */
-  transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    margin: 0;
+    /* La transición es clave para que el cambio no sea brusco */
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
 }
 
 html,
 body {
-  height: 100%;
-  overflow: hidden;
+    height: 100%;
+    overflow: hidden;
 }
 
 /* Asegúrate de que Tailwind use las variables para los bordes y fondos */
 * {
-  border-color: var(--border);
+    border-color: var(--border);
 }
 
 /* Scrollbar Personalizada */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+    width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 10px;
+    background: var(--border);
+    border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--foreground);
-  opacity: 0.2;
+    background: var(--foreground);
+    opacity: 0.2;
 }
 
 /* --- ANIMACIONES NEURAL PROTOCOL --- */
 
 /* 1. Vibración para el Modal de Confirmación */
 @keyframes system-shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
 
-  0%,
-  100% {
-    transform: translateX(0);
-  }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-4px);
+    }
 
-  10%,
-  30%,
-  50%,
-  70%,
-  90% {
-    transform: translateX(-4px);
-  }
-
-  20%,
-  40%,
-  60%,
-  80% {
-    transform: translateX(4px);
-  }
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(4px);
+    }
 }
 
 .animate-system-shake {
-  animation: system-shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+    animation: system-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* 2. Spin lento para el loader de transacción */
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(-360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+}
+
+/* 3. Barra de progreso animada */
+@keyframes progress {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(400%);
+    }
+}
+
+.animate-progress {
+    animation: progress 1.5s ease-in-out infinite;
+}
+
+/* 4. Animación del checkmark de éxito */
+@keyframes checkmark {
+    0% {
+        transform: scale(0) rotate(-45deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.animate-checkmark {
+    animation: checkmark 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+}
+
+/* 5. Pulso suave para el contenedor del checkmark */
+@keyframes pulse-ring {
+    0% {
+        transform: scale(0.9);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0.9);
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse-ring {
+    animation: pulse-ring 2s ease-in-out infinite;
 }
