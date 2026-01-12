@@ -7,6 +7,8 @@ import {
   PaymentModal,
   useCart,
 } from "@/components/sales";
+import { TicketTemplate } from "@/components/sales/TicketTemplate";
+import { useRef } from "react";
 
 export default function SalesPage() {
   const [products, setProducts] = useState([]);
@@ -18,6 +20,9 @@ export default function SalesPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
   const [refreshingStock, setRefreshingStock] = useState(false);
+  const [completedSale, setCompletedSale] = useState(null); // Datos completos de la venta para el ticket
+
+  const ticketRef = useRef(null);
 
   // Hook optimizado con persistencia
   const {
@@ -91,6 +96,7 @@ export default function SalesPage() {
     setIsPaymentModalOpen(false);
     setIsSuccess(false);
     setTransactionId(null);
+    setCompletedSale(null);
   };
 
   // Procesar la venta con método de pago seleccionado
@@ -104,9 +110,6 @@ export default function SalesPage() {
       const result = await processTransaction(cart, totalPrice, paymentMethod);
       if (result.success) {
         // ✅ OPTIMISTIC UPDATE: Actualizar stock local inmediatamente
-        // Esto proporciona feedback instantáneo al usuario sin esperar
-        // la recarga desde el servidor. El stock se actualizará con el
-        // valor real del servidor cuando se haga clic en "Nueva Venta"
         setProducts((prevProducts) =>
           prevProducts.map((product) => {
             const cartItem = cart.find((item) => item.id === product.id);
@@ -120,8 +123,9 @@ export default function SalesPage() {
           }),
         );
 
-        // Cambiar a estado de éxito
+        // Cambiar a estado de éxito y guardar datos para ticket
         setTransactionId(result.transactionId);
+        setCompletedSale(result.data); // Guardamos el objeto venta retornado por el backend
         setIsSuccess(true);
       } else {
         alert("Error en la transacción: " + result.error);
@@ -139,27 +143,21 @@ export default function SalesPage() {
     setIsPaymentModalOpen(false);
     setIsSuccess(false);
     setTransactionId(null);
+    setCompletedSale(null);
 
-    // 🔄 REVALIDACIÓN: Refrescar el catálogo desde el servidor
-    // Esto asegura que el stock mostrado sea el valor real de la base de datos
-    // y sincroniza cualquier cambio que otros usuarios puedan haber hecho
+    // 🔄 REVALIDACIÓN
     setRefreshingStock(true);
     try {
       await fetchProducts(searchQuery, false);
     } finally {
-      // Pequeño delay (300ms) para suavizar la transición visual
-      // y evitar que el spinner aparezca/desaparezca muy rápido
       setTimeout(() => setRefreshingStock(false), 300);
     }
   };
 
   // Manejar impresión de ticket
   const handlePrintTicket = () => {
-    // TODO: Implementar generación e impresión de ticket
-    alert("Función de impresión en desarrollo");
-    console.log("Imprimir ticket para transacción:", transactionId);
-    console.log("Items:", cart);
-    console.log("Totales:", { subtotal, totalTax, totalPrice });
+    if (!completedSale) return;
+    window.print();
   };
 
   // Prevenir flash de contenido incorrecto antes de cargar localStorage o en carga inicial
@@ -220,6 +218,19 @@ export default function SalesPage() {
         onNewSale={handleNewSale}
         onPrintTicket={handlePrintTicket}
       />
+
+      {/* Componente de Ticket (Invisible en pantalla, visible al imprimir) */}
+      {/* <div style={{ display: 'none' }}> */}
+      <div className="hidden print:block">
+        <div ref={ticketRef}>
+          {completedSale && (
+            <TicketTemplate
+              sale={completedSale}
+              items={cart}
+            />
+          )}
+        </div>
+      </div>
     </>
   );
 }
