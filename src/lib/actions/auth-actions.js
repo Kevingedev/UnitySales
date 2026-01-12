@@ -20,21 +20,21 @@ export async function getMyProfile() {
     }; */
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
-        console.log("No user found in session");
-        return { success: false, data: null };
+      console.log("No user found in session");
+      return { success: false, data: null };
     }
 
     const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('full_name, role_id, roles(rank_level, description)')
-        .eq('id', user.id)
-        .single();
-        
+      .from('profiles')
+      .select('full_name, role_id, roles(rank_level, description)')
+      .eq('id', user.id)
+      .single();
+
     if (profileError || !profile) {
-        console.error("Error cargando perfil:", profileError);
-        return { success: false, data: null };
+      console.error("Error cargando perfil:", profileError);
+      return { success: false, data: null };
     }
 
     const userData = {

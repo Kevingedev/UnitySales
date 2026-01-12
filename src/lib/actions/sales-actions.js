@@ -3,6 +3,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase-server";
+import { getMyProfile } from "@/lib/actions/auth-actions";
 
 /**
  * FETCH: Obtener todos los productos para ventas (con filtro opcional de búsqueda)
@@ -68,10 +69,19 @@ export async function processTransaction(
       return { success: false, error: "El total debe ser mayor a 0" };
     }
 
+    // 0. Obtener perfil de usuario
+    const profileRes = await getMyProfile();
+    if (!profileRes.success || !profileRes.user) {
+      throw new Error("No se pudo obtener el perfil del usuario para asociar la venta.");
+    }
+    const profileId = profileRes.user.id; // 'id' de la tabla 'profiles' (que es user.id)
+
     console.log("🔄 Iniciando procesamiento de venta...");
     console.log(`📦 Items: ${cartItems.length}`);
     console.log(`💰 Total: $${total}`);
     console.log(`💳 Método: ${paymentMethod}`);
+    console.log(`👤 Profile ID: ${profileId}`);
+
 
     // 1. Crear el registro de venta
     const { data: sale, error: saleError } = await supabase
@@ -80,6 +90,7 @@ export async function processTransaction(
         total_amount: total,
         payment_method: paymentMethod,
         is_finalized: true,
+        profile_id: profileId, // Asociamos el perfil
       })
       .select()
       .single();
@@ -137,6 +148,7 @@ export async function processTransaction(
         console.log(`⚠️  Producto sin lotes suficientes, usando stock directo`);
 
         // Producto sin lotes: crear un sale_item sin batch_id
+        const subtotal = item.base_price * item.quantity; // Subtotal para este item
         const { error: saleItemError } = await supabase
           .from("sale_items")
           .insert({
@@ -145,8 +157,10 @@ export async function processTransaction(
             batch_id: null,
             quantity: item.quantity,
             unit_price: item.base_price,
-            // tax_rate: item.tax_rate || 0,
-            // line_total: item.quantity * item.base_price,
+            product_name_at_sale: item.name,
+            tax_rate: item.tax_rate || 21.00,
+            discount_amount: item.discount_amount || 0.00,
+            subtotal: subtotal,
           });
 
         if (saleItemError) {
@@ -198,6 +212,7 @@ export async function processTransaction(
         }
 
         // Insertar en sale_items (un registro por cada lote usado)
+        const subtotalBatch = item.base_price * deductFromBatch;
         const { error: saleItemError } = await supabase
           .from("sale_items")
           .insert({
@@ -206,8 +221,10 @@ export async function processTransaction(
             batch_id: batch.id,
             quantity: deductFromBatch,
             unit_price: item.base_price,
-            // tax_rate: item.tax_rate || 0,
-            // line_total: deductFromBatch * item.base_price,
+            product_name_at_sale: item.name,
+            tax_rate: item.tax_rate || 21.00,
+            discount_amount: item.discount_amount || 0.00,
+            subtotal: subtotalBatch,
           });
 
         if (saleItemError) {
@@ -216,6 +233,7 @@ export async function processTransaction(
             `Error al registrar item de venta: ${saleItemError.message}`,
           );
         }
+
 
         remainingQty -= deductFromBatch;
       }
@@ -258,6 +276,7 @@ export async function processTransaction(
       success: true,
       transactionId: sale.id,
       message: "Venta procesada correctamente",
+      data: sale,
     };
   } catch (error) {
     console.error("❌ Transaction error:", error);

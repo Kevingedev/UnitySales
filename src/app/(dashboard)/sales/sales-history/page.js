@@ -138,11 +138,11 @@ export default function SalesHistoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-[var(--foreground)] uppercase tracking-tight">
-            Historial de Ventas
+            Sales History
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
             {totalCount}{" "}
-            {totalCount === 1 ? "venta registrada" : "ventas registradas"}
+            {totalCount === 1 ? "sale registered" : "sales registered"}
           </p>
         </div>
 
@@ -170,11 +170,11 @@ export default function SalesHistoryPage() {
                 <Receipt size={32} strokeWidth={1.5} className="opacity-50" />
               </div>
               <p className="text-sm font-bold text-[var(--foreground)]/80">
-                No se encontraron ventas
+                No sales found
               </p>
               {searchQuery && (
                 <p className="text-xs text-zinc-400 mt-1">
-                  Intenta con otro término de búsqueda
+                  Try with another search term
                 </p>
               )}
             </div>
@@ -186,22 +186,25 @@ export default function SalesHistoryPage() {
                     #
                   </th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    Fecha
+                    Seller
                   </th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    ID Transacción
+                    Date
                   </th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    Productos
+                    Transaction ID
                   </th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    Método
+                    Products
+                  </th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                    Method
                   </th>
                   <th className="px-6 py-4 text-right text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                     Total
                   </th>
                   <th className="px-6 py-4 text-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -217,6 +220,12 @@ export default function SalesHistoryPage() {
                         {(currentPage - 1) * itemsPerPage +
                           sales.indexOf(sale) +
                           1}
+                      </span>
+                    </td>
+                    {/* Seller */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-medium text-[var(--foreground)]">
+                        {sale.seller_name || "Unknown"} 
                       </span>
                     </td>
 
@@ -301,8 +310,8 @@ export default function SalesHistoryPage() {
       {/* Paginación */}
       <div className="flex items-center justify-between px-6 py-4 bg-[var(--card)] border border-[var(--border)] rounded-xl">
         <div className="text-sm text-zinc-500">
-          Página {currentPage} de {totalPages || 1} ({totalCount}{" "}
-          {totalCount === 1 ? "venta" : "ventas"})
+          Page {currentPage} of {totalPages || 1} ({totalCount}{" "}
+          {totalCount === 1 ? "sale" : "sales"})
         </div>
         {totalPages > 1 && (
           <div className="flex items-center gap-2">
@@ -331,11 +340,10 @@ export default function SalesHistoryPage() {
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
                     disabled={loading}
-                    className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${
-                      currentPage === pageNum
+                    className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${currentPage === pageNum
                         ? "bg-brand text-white"
                         : "hover:bg-[var(--background)] text-[var(--foreground)]"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {pageNum}
                   </button>
