@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { getSalesHistoryView } from "@/lib/actions/sales-actions";
+import { getSalesHistoryView, getSaleDetails } from "@/lib/actions/sales-actions";
+import SaleDetailsModal from "@/components/sales/SaleDetailsModal";
 import {
   Search,
   Calendar,
@@ -24,6 +25,33 @@ export default function SalesHistoryPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 10;
+
+  // Modal State
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  // Función para ver detalles
+  const handleViewDetails = async (saleId) => {
+    setIsModalOpen(true);
+    setDetailsLoading(true);
+    setSelectedSale(null);
+
+    try {
+      const { success, sale, error } = await getSaleDetails(saleId);
+      if (success) {
+        setSelectedSale(sale);
+      } else {
+        console.error("Error loading sale details:", error);
+        alert("Error al cargar los detalles de la venta");
+        setIsModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Error inesperado:", err);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   // Función para cargar ventas
   const fetchSales = useCallback(async (page, search) => {
@@ -225,7 +253,7 @@ export default function SalesHistoryPage() {
                     {/* Seller */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-[var(--foreground)]">
-                        {sale.seller_name || "Unknown"} 
+                        {sale.seller_name || "Unknown"}
                       </span>
                     </td>
 
@@ -292,7 +320,7 @@ export default function SalesHistoryPage() {
                     {/* Acciones */}
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button
-                        onClick={() => alert(`Ver detalles de ${sale.sale_id}`)}
+                        onClick={() => handleViewDetails(sale.sale_id)}
                         className="p-2 hover:bg-brand/10 rounded-lg text-zinc-500 hover:text-brand transition-colors"
                         title="Ver detalles"
                       >
@@ -341,8 +369,8 @@ export default function SalesHistoryPage() {
                     onClick={() => setCurrentPage(pageNum)}
                     disabled={loading}
                     className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${currentPage === pageNum
-                        ? "bg-brand text-white"
-                        : "hover:bg-[var(--background)] text-[var(--foreground)]"
+                      ? "bg-brand text-white"
+                      : "hover:bg-[var(--background)] text-[var(--foreground)]"
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {pageNum}
@@ -362,6 +390,14 @@ export default function SalesHistoryPage() {
           </div>
         )}
       </div>
+
+      {/* Modal De Detalles */}
+      <SaleDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        sale={selectedSale}
+        loading={detailsLoading}
+      />
     </div>
   );
 }

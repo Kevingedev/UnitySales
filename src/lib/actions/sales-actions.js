@@ -458,6 +458,7 @@ export async function getSaleDetails(saleId) {
       .select(
         `
         *,
+        profiles (full_name),
         sale_items (
           *,
           products (name, sku),
